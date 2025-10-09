@@ -1,10 +1,7 @@
 package swp302.topic6.evcoownership.entity;
 
-
-
 import jakarta.persistence.*;
 import lombok.*;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -50,6 +47,16 @@ public class User {
 
     @Column(name = "location")
     private String location;
+
+    // 🧩 Các đường dẫn ảnh upload
+    @Column(name = "cccd_front_url")
+    private String cccdFrontUrl;
+
+    @Column(name = "cccd_back_url")
+    private String cccdBackUrl;
+
+    @Column(name = "driver_license_url")
+    private String driverLicenseUrl;
 
     @PrePersist
     protected void onCreate() {

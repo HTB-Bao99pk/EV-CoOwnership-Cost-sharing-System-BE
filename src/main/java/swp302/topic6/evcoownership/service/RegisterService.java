@@ -34,7 +34,6 @@ public class RegisterService {
         newUser.setLocation(request.getLocation());
         newUser.setRole("user");
         newUser.setVerificationStatus("pending");
-
         userRepository.save(newUser);
         return "success";
     }
