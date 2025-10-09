@@ -1,0 +1,22 @@
+###  Test Register API
+POST http://localhost:8080/api/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Nguyen Vuong",
+  "email": "bao1923@example.com",
+  "password": "11111111",
+  "cccd": "123456089",
+  "driverLicense": "A12345",
+  "birthday": "2000-05-01",
+  "location": "Hanoi"
+}
+
+###  Test Login API
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "vuong@example.com",
+  "password": "123456"
+}
