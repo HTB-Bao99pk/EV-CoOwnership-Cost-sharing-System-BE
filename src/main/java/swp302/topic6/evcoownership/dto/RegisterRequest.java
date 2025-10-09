@@ -13,4 +13,7 @@ public class RegisterRequest {
     private String driverLicense;
     private LocalDate birthday;
     private String location;
+    private String cccdFrontBase64;
+    private String cccdBackBase64;
+    private String driverLicenseBase64;
 }
