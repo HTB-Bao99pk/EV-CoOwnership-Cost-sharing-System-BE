@@ -38,7 +38,7 @@ public class LoginService {
         res.setFullName(user.getFullName());
         res.setEmail(user.getEmail());
         res.setRole(user.getRole());
-
+        res.setUser(user);
         return res;
     }
 

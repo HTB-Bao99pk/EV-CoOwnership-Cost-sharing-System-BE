@@ -7,49 +7,58 @@ import org.springframework.web.bind.annotation.*;
 import swp302.topic6.evcoownership.dto.LoginRequest;
 import swp302.topic6.evcoownership.dto.LoginResponse;
 import swp302.topic6.evcoownership.service.LoginService;
+import swp302.topic6.evcoownership.utils.SessionUtils;
 
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "http://localhost:3000")
 public class LoginController {
-    private final LoginService loginService;
 
-    // Đăng nhập và tạo session
+    private final LoginService loginService;
+    private final SessionUtils sessionUtils;
+
+    // 👉 Đăng nhập
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request, HttpSession session) {
         LoginResponse response = loginService.login(request);
+
         if (response.isSuccess()) {
-            // Lưu thông tin user vào session
-            session.setAttribute("userId", response.getUserId());
-            session.setAttribute("email", response.getEmail());
-            session.setAttribute("role", response.getRole());
+            // Lưu thông tin đăng nhập vào session
+            sessionUtils.saveUserSession(session,
+                    response.getUserId(),
+                    response.getEmail(),
+                    response.getFullName(),
+                    response.getRole()
+            );
+            System.out.println("✅ Đăng nhập thành công - Lưu session userId = " + response.getUserId());
         }
+
         return ResponseEntity.ok(response);
     }
 
-    // Kiểm tra session hiện tại (test)
-    @GetMapping("/session")
-    public ResponseEntity<?> checkSession(HttpSession session) {
-        Object userId = session.getAttribute("userId");
-        Object email = session.getAttribute("email");
-        Object role = session.getAttribute("role");
-
-        if (userId == null) {
-            return ResponseEntity.status(401).body("Chưa đăng nhập !");
+    // 👉 Lấy thông tin người dùng hiện tại
+    @GetMapping("/current-user")
+    public ResponseEntity<String> getCurrentUser(HttpSession session) {
+        if (!sessionUtils.isLoggedIn(session)) {
+            return ResponseEntity.ok("❌ Bạn chưa đăng nhập!");
         }
 
-        return ResponseEntity.ok(new Object() {
-            public final Object id = userId;
-            public final Object userEmail = email;
-            public final Object userRole = role;
-        });
+        return ResponseEntity.ok("👤 Người dùng hiện tại: "
+                + sessionUtils.getFullName(session)
+                + " | Email: " + sessionUtils.getEmail(session)
+                + " | Role: " + sessionUtils.getRole(session)
+        );
     }
 
-    // Đăng xuất (xóa session)
-    @PostMapping("/logout")
+    // 👉 Đăng xuất
+    @GetMapping("/logout")
     public ResponseEntity<String> logout(HttpSession session) {
-        session.invalidate();
-        return ResponseEntity.ok("Đã đăng xuất thành công!");
+        if (!sessionUtils.isLoggedIn(session)) {
+            return ResponseEntity.ok("Bạn chưa đăng nhập!");
+        }
+
+        sessionUtils.clearSession(session);
+        return ResponseEntity.ok("✅ Đăng xuất thành công!");
     }
 }
