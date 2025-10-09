@@ -2,11 +2,10 @@ package swp302.topic6.evcoownership.controller;
 
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import swp302.topic6.evcoownership.dto.LoginRequest;
-import swp302.topic6.evcoownership.dto.LoginResponse;
-import swp302.topic6.evcoownership.service.LoginService;
+import swp302.topic6.evcoownership.entity.User;
+import swp302.topic6.evcoownership.repository.UserRepository;
 import swp302.topic6.evcoownership.utils.SessionUtils;
 
 @RestController
@@ -15,50 +14,39 @@ import swp302.topic6.evcoownership.utils.SessionUtils;
 @CrossOrigin(origins = "http://localhost:3000")
 public class LoginController {
 
-    private final LoginService loginService;
+    private final UserRepository userRepository;
     private final SessionUtils sessionUtils;
 
-    // 👉 Đăng nhập
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request, HttpSession session) {
-        LoginResponse response = loginService.login(request);
-
-        if (response.isSuccess()) {
-            // Lưu thông tin đăng nhập vào session
-            sessionUtils.saveUserSession(session,
-                    response.getUserId(),
-                    response.getEmail(),
-                    response.getFullName(),
-                    response.getRole()
-            );
-            System.out.println("✅ Đăng nhập thành công - Lưu session userId = " + response.getUserId());
+    public String login(@RequestBody LoginRequest request, HttpSession session) {
+        // 1️⃣ Tìm người dùng theo email
+        User user = userRepository.findByEmail(request.getEmail()).orElse(null);
+        if (user == null) {
+            return "Tài khoản không tồn tại";
         }
 
-        return ResponseEntity.ok(response);
-    }
-
-    // 👉 Lấy thông tin người dùng hiện tại
-    @GetMapping("/current-user")
-    public ResponseEntity<String> getCurrentUser(HttpSession session) {
-        if (!sessionUtils.isLoggedIn(session)) {
-            return ResponseEntity.ok("❌ Bạn chưa đăng nhập!");
+        // 2️⃣ Kiểm tra mật khẩu
+        if (!user.getPasswordHash().equals(request.getPassword())) {
+            return "Sai mật khẩu";
         }
 
-        return ResponseEntity.ok("👤 Người dùng hiện tại: "
-                + sessionUtils.getFullName(session)
-                + " | Email: " + sessionUtils.getEmail(session)
-                + " | Role: " + sessionUtils.getRole(session)
+        // 3️⃣ Lưu session (người dùng đã đăng nhập)
+        sessionUtils.saveUserSession(session,
+                user.getUserId(),
+                user.getEmail(),
+                user.getFullName(),
+                user.getRole()
         );
+
+        return "Đăng nhập thành công!";
     }
 
-    // 👉 Đăng xuất
     @GetMapping("/logout")
-    public ResponseEntity<String> logout(HttpSession session) {
+    public String logout(HttpSession session) {
         if (!sessionUtils.isLoggedIn(session)) {
-            return ResponseEntity.ok("Bạn chưa đăng nhập!");
+            return "Bạn chưa đăng nhập!";
         }
-
         sessionUtils.clearSession(session);
-        return ResponseEntity.ok("✅ Đăng xuất thành công!");
+        return "Đăng xuất thành công!";
     }
 }
