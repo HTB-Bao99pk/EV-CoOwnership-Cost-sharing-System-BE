@@ -4,9 +4,9 @@ Content-Type: application/json
 
 {
   "fullName": "Nguyen Vuong",
-  "email": "bao1923@example.com",
+  "email": "baov1923@example.com",
   "password": "11111111",
-  "cccd": "123456089",
+  "cccd": "123406089",
   "driverLicense": "A12345",
   "birthday": "2000-05-01",
   "location": "Hanoi"
