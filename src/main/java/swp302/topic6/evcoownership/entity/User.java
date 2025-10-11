@@ -27,35 +27,35 @@ public class User {
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
-    @Column(name = "cccd")
+    @Column(name = "cccd", nullable = false)
     private String cccd;
 
-    @Column(name = "driver_license")
+    @Column(name = "driver_license", nullable = false)
     private String driverLicense;
 
-    @Column(name = "birthday")
+    @Column(name = "birthday", nullable = false)
     private LocalDate birthday;
 
-    @Column(name = "role")
+    @Column(name = "role", nullable = false)
     private String role;
 
-    @Column(name = "verification_status")
+    @Column(name = "verification_status", nullable = false)
     private String verificationStatus;
 
-    @Column(name = "created_at")
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "location")
+    @Column(name = "location", nullable = false)
     private String location;
 
-    // 🧩 Các đường dẫn ảnh upload
-    @Column(name = "cccd_front_url")
+    // 🧩 Các đường dẫn ảnh upload (có thể cho phép null nếu người dùng chưa upload)
+    @Column(name = "cccd_front_url", nullable = false)
     private String cccdFrontUrl;
 
-    @Column(name = "cccd_back_url")
+    @Column(name = "cccd_back_url", nullable = false)
     private String cccdBackUrl;
 
-    @Column(name = "driver_license_url")
+    @Column(name = "driver_license_url", nullable = false)
     private String driverLicenseUrl;
 
     @PrePersist
