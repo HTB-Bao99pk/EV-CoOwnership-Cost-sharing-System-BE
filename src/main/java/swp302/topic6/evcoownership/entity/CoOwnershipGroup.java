@@ -1,8 +1,22 @@
 package swp302.topic6.evcoownership.entity;
 
-import jakarta.persistence.*;
-import lombok.*;
+import java.math.BigDecimal;
 import java.util.Date;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.Temporal;
+import jakarta.persistence.TemporalType;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * Bảng CoOwnershipGroups
@@ -44,6 +58,7 @@ public class CoOwnershipGroup {
 
     // 🔹 recruiting, active, closed
     @Column(name = "status", length = 20)
+    @Builder.Default
     private String status = "recruiting";
 
     @Column(name = "estimated_value")
@@ -51,12 +66,24 @@ public class CoOwnershipGroup {
 
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "created_at")
+    @Builder.Default
     private Date createdAt = new Date();
 
     // 🔹 pending, approved, rejected
     @Column(name = "approval_status", length = 20)
+    @Builder.Default
     private String approvalStatus = "pending";
 
     @Column(name = "reject_reason", length = 255)
     private String rejectReason;
+
+    // Giới hạn số thành viên tối đa (mặc định 5)
+    @Column(name = "max_members")
+    @Builder.Default
+    private Integer maxMembers = 5;
+
+    // Tỷ lệ sở hữu tối thiểu (%) để tham gia nhóm (mặc định 10.00)
+    @Column(name = "min_ownership_percentage", precision = 5, scale = 2)
+    @Builder.Default
+    private BigDecimal minOwnershipPercentage = new BigDecimal("10.00");
 }

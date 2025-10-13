@@ -1,14 +1,23 @@
 package swp302.topic6.evcoownership.controller;
 
-import lombok.RequiredArgsConstructor;
+import java.util.List;
+
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import lombok.RequiredArgsConstructor;
+import swp302.topic6.evcoownership.dto.GroupSettingsRequest;
 import swp302.topic6.evcoownership.entity.CoOwnershipGroup;
 import swp302.topic6.evcoownership.entity.GroupMember;
 import swp302.topic6.evcoownership.entity.User;
 import swp302.topic6.evcoownership.service.AdminService;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -64,6 +73,14 @@ public class AdminController {
             }
             return ResponseEntity.ok(adminService.rejectMember(memberId, reason));
         }
+    }
+
+    // ====== 4️⃣ Cập nhật cấu hình nhóm (maxMembers, minOwnershipPercentage)
+    @PostMapping("/group/{groupId}/settings")
+    public ResponseEntity<String> updateGroupSettings(@PathVariable Long groupId,
+                                                      @RequestBody GroupSettingsRequest req) {
+        String res = adminService.updateGroupSettings(groupId, req.getMaxMembers(), req.getMinOwnershipPercentage());
+        return ResponseEntity.ok(res);
     }
 
     // ====== 3️⃣ Duyệt xác minh tài khoản ======

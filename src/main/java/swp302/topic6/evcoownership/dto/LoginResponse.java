@@ -1,7 +1,6 @@
 package swp302.topic6.evcoownership.dto;
 
 import lombok.Data;
-import swp302.topic6.evcoownership.entity.User;
 
 @Data
 public class LoginResponse {
@@ -11,6 +10,6 @@ public class LoginResponse {
     private String fullName;
     private String email;
     private String role;
-    private User user; // thêm hẳn User vào response
+    private UserDto user; // safer user DTO without sensitive fields
 
 }
