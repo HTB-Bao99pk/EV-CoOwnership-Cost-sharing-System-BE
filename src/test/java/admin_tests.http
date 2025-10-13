@@ -1,0 +1,20 @@
+### 1. Lấy danh sách nhóm chờ duyệt
+GET http://localhost:8080/api/admin/pending-groups
+
+### 2. Duyệt một nhóm
+POST http://localhost:8080/api/admin/approve-group
+Content-Type: application/x-www-form-urlencoded
+
+groupId=1&approved=true&adminId=101
+
+### 3. Từ chối một nhóm
+POST http://localhost:8080/api/admin/approve-group
+Content-Type: application/x-www-form-urlencoded
+
+groupId=2&approved=false&reason=Thiếu tài liệu xe&adminId=101
+
+### 4. Duyệt xác minh người dùng
+POST http://localhost:8080/api/admin/verify-user
+Content-Type: application/x-www-form-urlencoded
+
+userId=201&approved=true
