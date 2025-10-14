@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
 import swp302.topic6.evcoownership.dto.CreateGroupRequest;
+import swp302.topic6.evcoownership.dto.GroupDetailResponse;
 import swp302.topic6.evcoownership.entity.CoOwnershipGroup;
 import swp302.topic6.evcoownership.entity.GroupMember;
 import swp302.topic6.evcoownership.entity.User;
@@ -59,6 +60,30 @@ public class GroupService {
 
         groupMemberRepository.save(req);
         return "Yêu cầu tham gia đã được gửi (chờ admin duyệt).";
+    }
+
+    /**
+     * Trả về chi tiết nhóm kèm số lượng thành viên active (memberCount)
+     */
+    public GroupDetailResponse getGroupDetail(Long groupId) {
+        Optional<CoOwnershipGroup> groupOpt = groupRepository.findById(groupId);
+        if (groupOpt.isEmpty()) return null;
+        CoOwnershipGroup g = groupOpt.get();
+        GroupDetailResponse resp = new GroupDetailResponse();
+        resp.setGroupId(g.getGroupId());
+    resp.setVehicleId(g.getVehicle() != null ? g.getVehicle().getVehicle_id() : null);
+        resp.setCreatedByUserId(g.getCreatedBy() != null ? g.getCreatedBy().getUserId() : null);
+        resp.setGroupName(g.getGroupName());
+        resp.setDescription(g.getDescription());
+        resp.setStatus(g.getStatus());
+        resp.setApprovalStatus(g.getApprovalStatus());
+        resp.setCreatedAt(g.getCreatedAt());
+        resp.setMaxMembers(g.getMaxMembers());
+        resp.setMinOwnershipPercentage(g.getMinOwnershipPercentage());
+        int memberCount = countActiveMembers(groupId);
+        resp.setMemberCount(memberCount);
+    // members list intentionally omitted — frontend only requires memberCount
+        return resp;
     }
 
     public String createGroup(CreateGroupRequest request, Long userId) {

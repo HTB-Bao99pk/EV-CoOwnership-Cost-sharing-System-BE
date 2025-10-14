@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import lombok.RequiredArgsConstructor;
 import swp302.topic6.evcoownership.dto.CreateGroupRequest;
+import swp302.topic6.evcoownership.dto.GroupDetailResponse;
 import swp302.topic6.evcoownership.service.GroupService;
 
 @RestController
@@ -63,5 +64,15 @@ public class GroupController {
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Lỗi khi gửi yêu cầu: " + e.getMessage());
         }
+    }
+
+    /**
+     * Trả về chi tiết nhóm kèm số lượng thành viên active
+     */
+    @GetMapping("/{groupId}")
+    public ResponseEntity<GroupDetailResponse> getGroupDetail(@PathVariable Long groupId) {
+        GroupDetailResponse resp = groupService.getGroupDetail(groupId);
+        if (resp == null) return ResponseEntity.notFound().build();
+        return ResponseEntity.ok(resp);
     }
 }
