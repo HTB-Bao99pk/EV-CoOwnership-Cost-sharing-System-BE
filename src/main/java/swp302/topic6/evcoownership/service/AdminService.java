@@ -176,6 +176,44 @@ public class AdminService {
         return userRepository.findByVerificationStatus("pending");
     }
 
+    // List all users
+    public List<User> getAllUsers() {
+        return userRepository.findAll();
+    }
+
+    // Get user by id
+    public Optional<User> getUserById(Long userId) {
+        return userRepository.findById(userId);
+    }
+
+    // Approve (activate) user
+    public String approveUser(Long userId) {
+        Optional<User> userOpt = userRepository.findById(userId);
+        if (userOpt.isEmpty()) return "Người dùng không tồn tại!";
+        User user = userOpt.get();
+        user.setVerificationStatus("verified");
+        userRepository.save(user);
+        return "✅ Người dùng đã được bật (verified).";
+    }
+
+    // Reject user
+    public String rejectUser(Long userId) {
+        Optional<User> userOpt = userRepository.findById(userId);
+        if (userOpt.isEmpty()) return "Người dùng không tồn tại!";
+        User user = userOpt.get();
+        user.setVerificationStatus("rejected");
+        userRepository.save(user);
+        return "❌ Người dùng đã bị từ chối.";
+    }
+
+    // Delete user
+    public String deleteUser(Long userId) {
+        Optional<User> userOpt = userRepository.findById(userId);
+        if (userOpt.isEmpty()) return "Người dùng không tồn tại!";
+        userRepository.deleteById(userId);
+        return "🗑️ Người dùng đã bị xóa.";
+    }
+
     public String verifyUser(Long userId) {
         Optional<User> userOpt = userRepository.findById(userId);
 

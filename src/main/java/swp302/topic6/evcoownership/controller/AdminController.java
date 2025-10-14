@@ -104,4 +104,30 @@ public class AdminController {
             return ResponseEntity.ok(adminService.rejectUserVerification(userId, reason));
         }
     }
+
+    // ===== Admin user management (list/get/approve/reject/delete)
+    @GetMapping("/users")
+    public ResponseEntity<List<User>> listUsers() {
+        return ResponseEntity.ok(adminService.getAllUsers());
+    }
+
+    @GetMapping("/users/{id}")
+    public ResponseEntity<User> getUser(@PathVariable Long id) {
+        return adminService.getUserById(id).map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/users/{id}/approve")
+    public ResponseEntity<String> approveUser(@PathVariable Long id) {
+        return ResponseEntity.ok(adminService.approveUser(id));
+    }
+
+    @PostMapping("/users/{id}/reject")
+    public ResponseEntity<String> rejectUser(@PathVariable Long id) {
+        return ResponseEntity.ok(adminService.rejectUser(id));
+    }
+
+    @PostMapping("/users/{id}/delete")
+    public ResponseEntity<String> deleteUser(@PathVariable Long id) {
+        return ResponseEntity.ok(adminService.deleteUser(id));
+    }
 }
