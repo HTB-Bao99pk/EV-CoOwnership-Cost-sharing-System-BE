@@ -237,4 +237,125 @@ public class AdminService {
 
         return "❌ Tài khoản " + user.getFullName() + " bị từ chối xác minh. Lý do: " + reason;
     }
+
+    // ==========================
+    // QUẢN LÝ YÊU CẦU THAM GIA NHÓM
+    // ==========================
+
+    /**
+     * Lấy tất cả yêu cầu tham gia nhóm
+     */
+    public List<swp302.topic6.evcoownership.dto.AdminRequestResponse> getAllJoinRequests() {
+        List<GroupMember> pendingMembers = groupMemberRepository.findByJoinStatus("pending");
+        
+        return pendingMembers.stream().map(member -> {
+            CoOwnershipGroup group = member.getGroup();
+            User user = member.getUser();
+            
+            return swp302.topic6.evcoownership.dto.AdminRequestResponse.builder()
+                    .id(member.getMemberId())
+                    .groupId(group.getGroupId())
+                    .groupName(group.getGroupName())
+                    .userId(user.getUserId())
+                    .userName(user.getFullName())
+                    .userEmail(user.getEmail())
+                    .message("Yêu cầu tham gia nhóm") // Có thể thêm field message vào GroupMember entity
+                    .status(member.getJoinStatus())
+                    .createdAt(member.getJoinDate())
+                    .updatedAt(member.getJoinDate())
+                    .requestedPercentage(member.getOwnershipPercentage())
+                    .build();
+        }).toList();
+    }
+
+    /**
+     * Lấy chi tiết yêu cầu tham gia theo ID
+     */
+    public Optional<swp302.topic6.evcoownership.dto.AdminRequestResponse> getJoinRequestById(Long requestId) {
+        Optional<GroupMember> memberOpt = groupMemberRepository.findById(requestId);
+        
+        if (memberOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        
+        GroupMember member = memberOpt.get();
+        CoOwnershipGroup group = member.getGroup();
+        User user = member.getUser();
+        
+        swp302.topic6.evcoownership.dto.AdminRequestResponse response = 
+            swp302.topic6.evcoownership.dto.AdminRequestResponse.builder()
+                .id(member.getMemberId())
+                .groupId(group.getGroupId())
+                .groupName(group.getGroupName())
+                .userId(user.getUserId())
+                .userName(user.getFullName())
+                .userEmail(user.getEmail())
+                .message("Yêu cầu tham gia nhóm")
+                .status(member.getJoinStatus())
+                .createdAt(member.getJoinDate())
+                .updatedAt(member.getJoinDate())
+                .requestedPercentage(member.getOwnershipPercentage())
+                .build();
+                
+        return Optional.of(response);
+    }
+
+    /**
+     * Chấp nhận yêu cầu tham gia nhóm
+     */
+    public String acceptJoinRequest(Long requestId) {
+        Optional<GroupMember> memberOpt = groupMemberRepository.findById(requestId);
+        
+        if (memberOpt.isEmpty()) {
+            throw new RuntimeException("Yêu cầu không tồn tại!");
+        }
+        
+        GroupMember member = memberOpt.get();
+        
+        if (!"pending".equals(member.getJoinStatus())) {
+            throw new RuntimeException("Yêu cầu đã được xử lý trước đó!");
+        }
+        
+        // Kiểm tra xem nhóm có còn chỗ không
+        CoOwnershipGroup group = member.getGroup();
+        int currentMemberCount = groupMemberRepository.countByGroupAndJoinStatus(group, "approved");
+        
+        if (currentMemberCount >= group.getMaxMembers()) {
+            throw new RuntimeException("Nhóm đã đầy thành viên!");
+        }
+        
+        // Chấp nhận yêu cầu
+        member.setJoinStatus("approved");
+        groupMemberRepository.save(member);
+        
+        return "✅ Đã chấp nhận yêu cầu tham gia nhóm của " + member.getUser().getFullName();
+    }
+
+    /**
+     * Từ chối yêu cầu tham gia nhóm
+     */
+    public String cancelJoinRequest(Long requestId, String reason) {
+        Optional<GroupMember> memberOpt = groupMemberRepository.findById(requestId);
+        
+        if (memberOpt.isEmpty()) {
+            throw new RuntimeException("Yêu cầu không tồn tại!");
+        }
+        
+        GroupMember member = memberOpt.get();
+        
+        if (!"pending".equals(member.getJoinStatus())) {
+            throw new RuntimeException("Yêu cầu đã được xử lý trước đó!");
+        }
+        
+        // Từ chối yêu cầu
+        member.setJoinStatus("rejected");
+        groupMemberRepository.save(member);
+        
+        String message = "❌ Đã từ chối yêu cầu tham gia nhóm của " + member.getUser().getFullName();
+        if (reason != null && !reason.trim().isEmpty()) {
+            message += ". Lý do: " + reason;
+        }
+        
+        return message;
+    }
 }

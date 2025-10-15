@@ -130,4 +130,55 @@ public class AdminController {
     public ResponseEntity<String> deleteUser(@PathVariable Long id) {
         return ResponseEntity.ok(adminService.deleteUser(id));
     }
+
+    // ====== 🆕 Request Management APIs ======
+    
+    /**
+     * Lấy tất cả yêu cầu tham gia nhóm
+     */
+    @GetMapping("/requests")
+    public ResponseEntity<List<swp302.topic6.evcoownership.dto.AdminRequestResponse>> getAllRequests() {
+        return ResponseEntity.ok(adminService.getAllJoinRequests());
+    }
+
+    /**
+     * Lấy chi tiết yêu cầu tham gia theo ID
+     */
+    @GetMapping("/requests/{requestId}")
+    public ResponseEntity<swp302.topic6.evcoownership.dto.AdminRequestResponse> getRequestById(@PathVariable Long requestId) {
+        return adminService.getJoinRequestById(requestId)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Chấp nhận yêu cầu tham gia nhóm
+     */
+    @PostMapping("/requests/{requestId}/accept")
+    public ResponseEntity<swp302.topic6.evcoownership.dto.ApiResponse> acceptRequest(@PathVariable Long requestId) {
+        try {
+            String message = adminService.acceptJoinRequest(requestId);
+            return ResponseEntity.ok(new swp302.topic6.evcoownership.dto.ApiResponse(true, message));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(new swp302.topic6.evcoownership.dto.ApiResponse(false, e.getMessage()));
+        }
+    }
+
+    /**
+     * Từ chối yêu cầu tham gia nhóm
+     */
+    @PostMapping("/requests/{requestId}/cancel")
+    public ResponseEntity<swp302.topic6.evcoownership.dto.ApiResponse> cancelRequest(
+            @PathVariable Long requestId,
+            @RequestBody(required = false) swp302.topic6.evcoownership.dto.CancelRequestBody body) {
+        try {
+            String reason = (body != null) ? body.getReason() : null;
+            String message = adminService.cancelJoinRequest(requestId, reason);
+            return ResponseEntity.ok(new swp302.topic6.evcoownership.dto.ApiResponse(true, message));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(new swp302.topic6.evcoownership.dto.ApiResponse(false, e.getMessage()));
+        }
+    }
 }

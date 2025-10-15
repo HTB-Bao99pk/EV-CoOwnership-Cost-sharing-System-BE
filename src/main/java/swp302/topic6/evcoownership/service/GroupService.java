@@ -7,7 +7,10 @@ import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
 import swp302.topic6.evcoownership.dto.CreateGroupRequest;
+import swp302.topic6.evcoownership.dto.EditGroupRequest;
 import swp302.topic6.evcoownership.dto.GroupDetailResponse;
+import swp302.topic6.evcoownership.dto.GroupMemberResponse;
+import swp302.topic6.evcoownership.dto.UserGroupResponse;
 import swp302.topic6.evcoownership.entity.CoOwnershipGroup;
 import swp302.topic6.evcoownership.entity.GroupMember;
 import swp302.topic6.evcoownership.entity.User;
@@ -137,5 +140,259 @@ public class GroupService {
         vehicleRepository.save(vehicle);
 
         return "Tạo nhóm thành công! Đang chờ admin duyệt.";
+    }
+
+    // ==========================
+    // 🆕 USER GROUP MANAGEMENT
+    // ==========================
+
+    /**
+     * Lấy danh sách nhóm của user
+     */
+    public java.util.List<UserGroupResponse> getUserGroups(Long userId) {
+        java.util.List<GroupMember> userMemberships = groupMemberRepository.findByUser_UserIdAndJoinStatus(userId, "active");
+        
+        return userMemberships.stream().map(member -> {
+            CoOwnershipGroup group = member.getGroup();
+            Vehicle vehicle = group.getVehicle();
+            
+            // Tính toán monthly fee (giả sử = estimatedValue / 60 tháng)
+            Double monthlyFee = group.getEstimatedValue() != null ? group.getEstimatedValue() / 60 : 0.0;
+            
+            // Kiểm tra role (creator = admin, others = member)
+            String role = group.getCreatedBy().getUserId().equals(userId) ? "admin" : "member";
+            
+            // Tính tổng ownership percentage của nhóm
+            java.util.List<GroupMember> allMembers = groupMemberRepository.findByGroup_GroupIdAndJoinStatus(group.getGroupId(), "active");
+            Double totalOwnership = allMembers.stream()
+                    .mapToDouble(m -> m.getOwnershipPercentage() != null ? m.getOwnershipPercentage() : 0.0)
+                    .sum();
+            
+            return UserGroupResponse.builder()
+                    .id(group.getGroupId())
+                    .groupName(group.getGroupName())
+                    .description(group.getDescription())
+                    .vehicleName(vehicle != null ? vehicle.getBrand() + " " + vehicle.getModel() : "Unknown Vehicle")
+                    .vehicleModel(vehicle != null ? vehicle.getModel() : null)
+                    .currentMembers(allMembers.size())
+                    .maxMembers(group.getMaxMembers())
+                    .myOwnershipPercentage(member.getOwnershipPercentage())
+                    .totalOwnershipPercentage(totalOwnership)
+                    .estimatedValue(group.getEstimatedValue())
+                    .monthlyFee(monthlyFee)
+                    .status(group.getStatus())
+                    .role(role)
+                    .createdAt(group.getCreatedAt())
+                    .build();
+        }).collect(java.util.stream.Collectors.toList());
+    }
+
+    /**
+     * Chỉnh sửa thông tin nhóm (chỉ admin nhóm)
+     */
+    public String editGroup(Long groupId, EditGroupRequest request, Long userId) {
+        Optional<CoOwnershipGroup> groupOpt = groupRepository.findById(groupId);
+        if (groupOpt.isEmpty()) {
+            throw new RuntimeException("Nhóm không tồn tại!");
+        }
+        
+        CoOwnershipGroup group = groupOpt.get();
+        
+        // Kiểm tra quyền admin
+        if (!group.getCreatedBy().getUserId().equals(userId)) {
+            throw new RuntimeException("Bạn không có quyền chỉnh sửa nhóm này!");
+        }
+        
+        // Cập nhật thông tin
+        if (request.getGroupName() != null && !request.getGroupName().trim().isEmpty()) {
+            group.setGroupName(request.getGroupName());
+        }
+        if (request.getDescription() != null) {
+            group.setDescription(request.getDescription());
+        }
+        if (request.getMaxMembers() != null && request.getMaxMembers() > 0) {
+            // Kiểm tra không được nhỏ hơn số thành viên hiện tại
+            int currentMembers = countActiveMembers(groupId);
+            if (request.getMaxMembers() < currentMembers) {
+                throw new RuntimeException("Số thành viên tối đa không được nhỏ hơn số thành viên hiện tại (" + currentMembers + ")!");
+            }
+            group.setMaxMembers(request.getMaxMembers());
+        }
+        if (request.getMinOwnershipPercentage() != null) {
+            group.setMinOwnershipPercentage(request.getMinOwnershipPercentage());
+        }
+        
+        groupRepository.save(group);
+        return "Cập nhật thông tin nhóm thành công!";
+    }
+
+    /**
+     * Xóa nhóm (chỉ admin nhóm)
+     */
+    public String deleteGroup(Long groupId, Long userId) {
+        Optional<CoOwnershipGroup> groupOpt = groupRepository.findById(groupId);
+        if (groupOpt.isEmpty()) {
+            throw new RuntimeException("Nhóm không tồn tại!");
+        }
+        
+        CoOwnershipGroup group = groupOpt.get();
+        
+        // Kiểm tra quyền admin
+        if (!group.getCreatedBy().getUserId().equals(userId)) {
+            throw new RuntimeException("Bạn không có quyền xóa nhóm này!");
+        }
+        
+        // Xóa tất cả thành viên trước
+        java.util.List<GroupMember> members = groupMemberRepository.findByGroup_GroupId(groupId);
+        groupMemberRepository.deleteAll(members);
+        
+        // Cập nhật trạng thái xe về available
+        Vehicle vehicle = group.getVehicle();
+        if (vehicle != null) {
+            vehicle.setStatus("available");
+            vehicleRepository.save(vehicle);
+        }
+        
+        // Xóa nhóm
+        groupRepository.delete(group);
+        
+        return "Xóa nhóm thành công!";
+    }
+
+    /**
+     * Chấp nhận yêu cầu tham gia (admin nhóm)
+     */
+    public String acceptJoinRequest(Long requestId, Long userId) {
+        Optional<GroupMember> memberOpt = groupMemberRepository.findById(requestId);
+        if (memberOpt.isEmpty()) {
+            throw new RuntimeException("Yêu cầu không tồn tại!");
+        }
+        
+        GroupMember member = memberOpt.get();
+        CoOwnershipGroup group = member.getGroup();
+        
+        // Kiểm tra quyền admin
+        if (!group.getCreatedBy().getUserId().equals(userId)) {
+            throw new RuntimeException("Bạn không có quyền duyệt yêu cầu cho nhóm này!");
+        }
+        
+        if (!"pending".equals(member.getJoinStatus())) {
+            throw new RuntimeException("Yêu cầu đã được xử lý trước đó!");
+        }
+        
+        // Kiểm tra giới hạn thành viên
+        int currentMembers = countActiveMembers(group.getGroupId());
+        if (currentMembers >= group.getMaxMembers()) {
+            throw new RuntimeException("Nhóm đã đạt giới hạn thành viên!");
+        }
+        
+        // Chấp nhận yêu cầu
+        member.setJoinStatus("active");
+        groupMemberRepository.save(member);
+        
+        return "Đã chấp nhận yêu cầu tham gia của " + member.getUser().getFullName();
+    }
+
+    /**
+     * Xóa thành viên khỏi nhóm (admin nhóm)
+     */
+    public String removeMember(Long groupId, Long memberId, Long userId) {
+        Optional<CoOwnershipGroup> groupOpt = groupRepository.findById(groupId);
+        if (groupOpt.isEmpty()) {
+            throw new RuntimeException("Nhóm không tồn tại!");
+        }
+        
+        CoOwnershipGroup group = groupOpt.get();
+        
+        // Kiểm tra quyền admin
+        if (!group.getCreatedBy().getUserId().equals(userId)) {
+            throw new RuntimeException("Bạn không có quyền xóa thành viên khỏi nhóm này!");
+        }
+        
+        // Tìm thành viên cần xóa
+        Optional<GroupMember> memberOpt = groupMemberRepository.findByGroup_GroupIdAndUser_UserId(groupId, memberId);
+        if (memberOpt.isEmpty()) {
+            throw new RuntimeException("Thành viên không tồn tại trong nhóm!");
+        }
+        
+        GroupMember member = memberOpt.get();
+        
+        // Không cho phép xóa chính mình (admin)
+        if (member.getUser().getUserId().equals(userId)) {
+            throw new RuntimeException("Không thể xóa chính mình khỏi nhóm!");
+        }
+        
+        // Xóa thành viên
+        groupMemberRepository.delete(member);
+        
+        return "Đã xóa " + member.getUser().getFullName() + " khỏi nhóm!";
+    }
+
+    /**
+     * Lấy danh sách thành viên trong nhóm
+     */
+    public java.util.List<GroupMemberResponse> getGroupMembers(Long groupId, Long userId) {
+        // Kiểm tra user có quyền xem thành viên không (phải là thành viên của nhóm)
+        Optional<GroupMember> userMemberOpt = groupMemberRepository.findByGroup_GroupIdAndUser_UserId(groupId, userId);
+        if (userMemberOpt.isEmpty()) {
+            throw new RuntimeException("Bạn không có quyền xem thành viên của nhóm này!");
+        }
+        
+        java.util.List<GroupMember> members = groupMemberRepository.findByGroup_GroupIdAndJoinStatus(groupId, "active");
+        
+        return members.stream().map(member -> {
+            User user = member.getUser();
+            CoOwnershipGroup group = member.getGroup();
+            
+            // Xác định role
+            String role = group.getCreatedBy().getUserId().equals(user.getUserId()) ? "admin" : "member";
+            
+            return GroupMemberResponse.builder()
+                    .id(member.getMemberId())
+                    .userId(user.getUserId())
+                    .userName(user.getFullName())
+                    .userEmail(user.getEmail())
+                    .ownershipPercentage(member.getOwnershipPercentage())
+                    .role(role)
+                    .joinedAt(member.getJoinDate())
+                    .status("active")
+                    .build();
+        }).collect(java.util.stream.Collectors.toList());
+    }
+
+    /**
+     * Lấy thông tin chi tiết một thành viên
+     */
+    public Optional<GroupMemberResponse> getGroupMemberById(Long groupId, Long memberId, Long userId) {
+        // Kiểm tra user có quyền xem không
+        Optional<GroupMember> userMemberOpt = groupMemberRepository.findByGroup_GroupIdAndUser_UserId(groupId, userId);
+        if (userMemberOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        
+        Optional<GroupMember> memberOpt = groupMemberRepository.findByGroup_GroupIdAndUser_UserId(groupId, memberId);
+        if (memberOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        
+        GroupMember member = memberOpt.get();
+        User user = member.getUser();
+        CoOwnershipGroup group = member.getGroup();
+        
+        String role = group.getCreatedBy().getUserId().equals(user.getUserId()) ? "admin" : "member";
+        
+        GroupMemberResponse response = 
+            GroupMemberResponse.builder()
+                .id(member.getMemberId())
+                .userId(user.getUserId())
+                .userName(user.getFullName())
+                .userEmail(user.getEmail())
+                .ownershipPercentage(member.getOwnershipPercentage())
+                .role(role)
+                .joinedAt(member.getJoinDate())
+                .status(member.getJoinStatus())
+                .build();
+                
+        return Optional.of(response);
     }
 }
