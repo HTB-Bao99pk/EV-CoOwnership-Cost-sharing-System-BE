@@ -45,12 +45,12 @@ public class GroupService {
         // ✅ Tạo nhóm chia sẻ xe
         CoOwnershipGroup group = CoOwnershipGroup.builder()
                 .vehicle(vehicle)
-                .createdBy(creator) // ĐÃ SỬA: created_by -> createdBy
-                .groupName(request.getGroupName()) // ĐÃ SỬA: group_name -> groupName
+                .createdBy(creator)
+                .groupName(request.getGroupName())
                 .description(request.getDescription())
-                .estimatedValue(request.getEstimatedValue()) // ĐÃ SỬA: estimated_value -> estimatedValue
+                .estimatedValue(request.getEstimatedValue())
                 .status("recruiting")
-                .approvalStatus("pending")  // ĐÃ SỬA: approval_status -> approvalStatus
+                .approvalStatus("pending")
                 .createdAt(new Date()) // Giả định trường này là 'createdAt'
                 .build();
 

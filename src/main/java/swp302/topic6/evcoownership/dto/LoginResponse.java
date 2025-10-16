@@ -11,6 +11,6 @@ public class LoginResponse {
     private String fullName;
     private String email;
     private String role;
-    private User user; // thêm hẳn User vào response
+    private User user; // Thêm trường user để trả về toàn bộ thông tin người dùng
 
 }

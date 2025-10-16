@@ -46,8 +46,7 @@ public class AdminController {
     // ====== 2️⃣ Duyệt thành viên ======
     @GetMapping("/pending-members")
     public ResponseEntity<List<GroupMember>> getPendingMembers() {
-        // SỬA LỖI TÊN PHƯƠNG THỨC: getPendingJoinRequests -> getPendingMembers
-        return ResponseEntity.ok(adminService.getPendingMembers());
+            return ResponseEntity.ok(adminService.getPendingMembers());
     }
 
     @PostMapping("/approve-member")
