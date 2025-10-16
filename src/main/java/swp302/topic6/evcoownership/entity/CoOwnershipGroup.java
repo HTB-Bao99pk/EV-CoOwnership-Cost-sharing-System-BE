@@ -1,7 +1,12 @@
 package swp302.topic6.evcoownership.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
 import java.util.Date;
 
 /**
@@ -59,4 +64,14 @@ public class CoOwnershipGroup {
 
     @Column(name = "reject_reason", length = 255)
     private String rejectReason;
+    // Giới hạn số thành viên tối đa (mặc định 5)
+    @Column(name = "max_members")
+    @Builder.Default
+    private Integer maxMembers = 5;
+
+    // Tỷ lệ sở hữu tối thiểu (%) để tham gia nhóm (mặc định 10.00)
+    @Column(name = "min_ownership_percentage", precision = 5, scale = 2)
+    @Builder.Default
+    private BigDecimal minOwnershipPercentage = new BigDecimal("10.00");
 }
+
