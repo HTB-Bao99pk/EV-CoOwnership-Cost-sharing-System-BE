@@ -1,0 +1,3 @@
+POST http://localhost:8080/api/groups/3/join?userId=7
+
+
