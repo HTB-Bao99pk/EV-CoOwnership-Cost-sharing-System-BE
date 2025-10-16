@@ -44,9 +44,20 @@ public class GroupService {
             return "❌ Bạn không phải chủ sở hữu xe này!";
         }
 
-        // ✅ Xe đang thuộc nhóm khác => chặn
+        // ✅ Kiểm tra xe đã nằm trong nhóm khác hay chưa
+        boolean vehicleInOtherGroup = groupRepository.findAll().stream()
+                .anyMatch(g -> g.getVehicle() != null
+                        && g.getVehicle().getVehicle_id().equals(vehicle.getVehicle_id())
+                        && !"rejected".equalsIgnoreCase(g.getApprovalStatus())
+                        && !"closed".equalsIgnoreCase(g.getStatus()));
+
+        if (vehicleInOtherGroup) {
+            return "⚠️ Xe này đã nằm trong nhóm khác hoặc nhóm đó đang hoạt động/chờ duyệt!";
+        }
+
+        // ✅ Kiểm tra trạng thái xe
         if (!"available".equalsIgnoreCase(vehicle.getStatus())) {
-            return "⚠️ Xe này hiện không thể tạo nhóm (đang chờ duyệt hoặc thuộc nhóm khác)!";
+            return "⚠️ Xe này hiện không sẵn sàng để tạo nhóm (đang chờ duyệt hoặc thuộc nhóm khác)!";
         }
 
         // ✅ Tạo nhóm chia sẻ
@@ -75,10 +86,9 @@ public class GroupService {
         GroupMember ownerMember = GroupMember.builder()
                 .group(group)
                 .user(creator)
-                .ownershipPercentage(100.0) // Tạm thời 100%, sau này có thể chia lại
+                .ownershipPercentage(100.0) // Tạm thời 100%, sau này sẽ chia lại khi có thêm thành viên
                 .joinStatus("approved")
                 .joinDate(new Date())
-
                 .build();
 
         groupMemberRepository.save(ownerMember);
@@ -87,14 +97,14 @@ public class GroupService {
     }
 
     /**
-     * 🟡 Xem chi tiết nhóm
+     * 🔍 Xem chi tiết nhóm
      */
     public Optional<CoOwnershipGroup> getGroupById(Long groupId) {
         return groupRepository.findById(groupId);
     }
 
     /**
-     * 🟣 Xem danh sách nhóm đang tuyển thành viên
+     * 📋 Danh sách nhóm đang tuyển thành viên
      */
     public java.util.List<CoOwnershipGroup> getRecruitingGroups() {
         return groupRepository.findByStatus("recruiting");
