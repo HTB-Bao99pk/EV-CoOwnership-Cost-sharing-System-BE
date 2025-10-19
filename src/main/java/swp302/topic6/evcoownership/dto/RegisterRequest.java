@@ -1,6 +1,7 @@
 package swp302.topic6.evcoownership.dto;
 
 import lombok.Data;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 
@@ -13,7 +14,9 @@ public class RegisterRequest {
     private String driverLicense;
     private LocalDate birthday;
     private String location;
-    private String cccdFrontBase64;
-    private String cccdBackBase64;
-    private String driverLicenseBase64;
+
+    // Ảnh upload thực tế (file)
+    private MultipartFile cccdFront;
+    private MultipartFile cccdBack;
+    private MultipartFile driverLicenseImg;
 }
