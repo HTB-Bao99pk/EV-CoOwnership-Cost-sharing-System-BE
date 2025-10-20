@@ -27,58 +27,53 @@ public class LoginController {
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request, HttpSession session) {
         LoginResponse resp = new LoginResponse();
-        try {
-            User user = loginService.login(request);
 
-            // Lưu session
-            sessionUtils.saveUserSession(session,
-                    user.getUserId(),
-                    user.getEmail(),
-                    user.getFullName(),
-                    user.getRole()
-            );
+        // ⭐️ TỐI ƯU: Xoá try-catch.
+        // Service sẽ ném exception nếu thất bại, GlobalExceptionHandler sẽ bắt lỗi đó.
+        User user = loginService.login(request);
 
-            resp.setSuccess(true);
-            resp.setMessage("Đăng nhập thành công");
-            resp.setUserId(user.getUserId());
-            resp.setFullName(user.getFullName());
-            resp.setEmail(user.getEmail());
-            resp.setRole(user.getRole());
-        // Map User -> UserDto to avoid exposing sensitive fields
+        // Lưu session
+        sessionUtils.saveUserSession(session,
+                user.getUserId(),
+                user.getEmail(),
+                user.getFullName(),
+                user.getRole()
+        );
+
+        resp.setSuccess(true);
+        resp.setMessage("Đăng nhập thành công");
+
+        // Map User -> UserDto
         UserDto userDto = UserDto.builder()
-            .userId(user.getUserId())
-            .fullName(user.getFullName())
-            .email(user.getEmail())
-            .cccd(user.getCccd())
-            .driverLicense(user.getDriverLicense())
-            .birthday(user.getBirthday())
-            .role(user.getRole())
-            .verificationStatus(user.getVerificationStatus())
-            .createdAt(user.getCreatedAt())
-            .location(user.getLocation())
-            .cccdFrontUrl(user.getCccdFrontUrl())
-            .cccdBackUrl(user.getCccdBackUrl())
-            .driverLicenseUrl(user.getDriverLicenseUrl())
-            .build();
+                .userId(user.getUserId())
+                .fullName(user.getFullName())
+                .email(user.getEmail())
+                .cccd(user.getCccd())
+                .driverLicense(user.getDriverLicense())
+                .birthday(user.getBirthday())
+                .role(user.getRole())
+                .verificationStatus(user.getVerificationStatus())
+                .createdAt(user.getCreatedAt())
+                .location(user.getLocation())
+                .cccdFrontUrl(user.getCccdFrontUrl())
+                .cccdBackUrl(user.getCccdBackUrl())
+                .driverLicenseUrl(user.getDriverLicenseUrl())
+                .build();
 
+        // ⭐️ TỐI ƯU: Chỉ cần set UserDto
         resp.setUser(userDto);
 
-            return ResponseEntity.ok(resp);
-        } catch (RuntimeException ex) {
-            resp.setSuccess(false);
-            resp.setMessage(ex.getMessage());
-            return ResponseEntity.badRequest().body(resp);
-        }
+        return ResponseEntity.ok(resp);
     }
 
     @GetMapping("/logout")
     public ResponseEntity<LoginResponse> logout(HttpSession session) {
         LoginResponse resp = new LoginResponse();
         if (!sessionUtils.isLoggedIn(session)) {
-            resp.setSuccess(false);
-            resp.setMessage("Bạn chưa đăng nhập!");
-            return ResponseEntity.badRequest().body(resp);
+            // ⭐️ TỐI ƯU: Ném lỗi để Handler bắt
+            throw new RuntimeException("Bạn chưa đăng nhập!");
         }
+
         sessionUtils.clearSession(session);
         resp.setSuccess(true);
         resp.setMessage("Đăng xuất thành công!");

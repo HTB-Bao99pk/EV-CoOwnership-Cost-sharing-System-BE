@@ -14,15 +14,13 @@ public class LoginService {
 
     public User login(LoginRequest request) {
 
-        // Tìm user theo email
-        User user = userRepository.findByEmail(request.getEmail()).orElse(null);
+        // ⭐️ TỐI ƯU: Dùng orElseThrow để ném lỗi nếu không tìm thấy
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("Tài khoản không tồn tại!"));
 
-        if (user == null) {
-            throw new RuntimeException("Tài khoản không tồn tại!");
-        }
-
-        // Kiểm tra mật khẩu
+        // Kiểm tra mật khẩu (giữ nguyên theo yêu cầu)
         if (!user.getPasswordHash().equals(request.getPassword())) {
+            // ⭐️ TỐI ƯU: Ném exception
             throw new RuntimeException("Sai mật khẩu!");
         }
 

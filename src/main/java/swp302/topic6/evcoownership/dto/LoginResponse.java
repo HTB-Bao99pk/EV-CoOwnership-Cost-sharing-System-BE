@@ -6,10 +6,13 @@ import lombok.Data;
 public class LoginResponse {
     private boolean success;
     private String message;
-    private Long userId;
-    private String fullName;
-    private String email;
-    private String role;
-    private UserDto user; // safer user DTO without sensitive fields
 
+    // ⭐️ TỐI ƯU: Chỉ cần trả về UserDto là đủ,
+    // không cần các trường (userId, fullName, email, role) lặp lại
+    // private Long userId;
+    // private String fullName;
+    // private String email;
+    // private String role;
+
+    private UserDto user; // safer user DTO without sensitive fields
 }

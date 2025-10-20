@@ -18,6 +18,7 @@ import swp302.topic6.evcoownership.entity.Vehicle;
 import swp302.topic6.evcoownership.repository.CoOwnershipGroupRepository;
 import swp302.topic6.evcoownership.repository.UserRepository;
 import swp302.topic6.evcoownership.repository.VehicleRepository;
+import swp302.topic6.evcoownership.repository.GroupMemberRepository; // ⭐️ TỐI ƯU: Sửa import
 
 
 @Service
@@ -27,7 +28,8 @@ public class GroupService {
     private final CoOwnershipGroupRepository groupRepository;
     private final VehicleRepository vehicleRepository;
     private final UserRepository userRepository;
-    private final swp302.topic6.evcoownership.repository.GroupMemberRepository groupMemberRepository;
+    // ⭐️ TỐI ƯU: Sửa tên repo cho đúng
+    private final GroupMemberRepository groupMemberRepository;
 
     // Trả về số lượng thành viên active trong nhóm
     public int countActiveMembers(Long groupId) {
@@ -36,21 +38,18 @@ public class GroupService {
 
     // User requests to join a group with a requested ownership percentage
     public String requestToJoinGroup(Long groupId, Long userId, Double requestedPercentage) {
-        // check group exists
-        Optional<CoOwnershipGroup> groupOpt = groupRepository.findById(groupId);
-        Optional<User> userOpt = userRepository.findById(userId);
-        if (groupOpt.isEmpty() || userOpt.isEmpty()) {
-            return "Nhóm hoặc người dùng không tồn tại";
-        }
-
-        CoOwnershipGroup group = groupOpt.get();
+        // ⭐️ TỐI ƯU: Ném lỗi thay vì trả string
+        CoOwnershipGroup group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new RuntimeException("Nhóm không tồn tại"));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Người dùng không tồn tại"));
 
         // validate minimum percentage based on group setting
         double minPct = group.getMinOwnershipPercentage() != null ? group.getMinOwnershipPercentage().doubleValue() : 10.0;
         if (requestedPercentage == null || requestedPercentage < minPct) {
-            return "Tỷ lệ đóng góp tối thiểu để tham gia là " + minPct + "%";
+            // ⭐️ TỐI ƯU: Ném lỗi
+            throw new RuntimeException("Tỷ lệ đóng góp tối thiểu để tham gia là " + minPct + "%");
         }
-        User user = userOpt.get();
 
         // create pending GroupMember
         GroupMember req = GroupMember.builder()
@@ -69,12 +68,13 @@ public class GroupService {
      * Trả về chi tiết nhóm kèm số lượng thành viên active (memberCount)
      */
     public GroupDetailResponse getGroupDetail(Long groupId) {
-        Optional<CoOwnershipGroup> groupOpt = groupRepository.findById(groupId);
-        if (groupOpt.isEmpty()) return null;
-        CoOwnershipGroup g = groupOpt.get();
+        // ⭐️ TỐI ƯU: Ném lỗi nếu không tìm thấy
+        CoOwnershipGroup g = groupRepository.findById(groupId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy nhóm với ID: " + groupId));
+
         GroupDetailResponse resp = new GroupDetailResponse();
         resp.setGroupId(g.getGroupId());
-    resp.setVehicleId(g.getVehicle() != null ? g.getVehicle().getVehicle_id() : null);
+        resp.setVehicleId(g.getVehicle() != null ? g.getVehicle().getVehicle_id() : null);
         resp.setCreatedByUserId(g.getCreatedBy() != null ? g.getCreatedBy().getUserId() : null);
         resp.setGroupName(g.getGroupName());
         resp.setDescription(g.getDescription());
@@ -83,43 +83,41 @@ public class GroupService {
         resp.setCreatedAt(g.getCreatedAt());
         resp.setMaxMembers(g.getMaxMembers());
         resp.setMinOwnershipPercentage(g.getMinOwnershipPercentage());
+
         int memberCount = countActiveMembers(groupId);
         resp.setMemberCount(memberCount);
-    // members list intentionally omitted — frontend only requires memberCount
         return resp;
     }
 
     public String createGroup(CreateGroupRequest request, Long userId) {
-        Optional<Vehicle> vehicleOpt = vehicleRepository.findById(request.getVehicleId());
-        Optional<User> userOpt = userRepository.findById(userId);
-
-        if (vehicleOpt.isEmpty() || userOpt.isEmpty()) {
-            return "Xe hoặc người dùng không tồn tại!";
-        }
-
-        Vehicle vehicle = vehicleOpt.get();
-        User creator = userOpt.get();
+        // ⭐️ TỐI ƯU: Ném lỗi
+        Vehicle vehicle = vehicleRepository.findById(request.getVehicleId())
+                .orElseThrow(() -> new RuntimeException("Xe không tồn tại!"));
+        User creator = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Người dùng không tồn tại!"));
 
         // ❌ Nếu không phải chủ xe → không được phép tạo nhóm
         if (vehicle.getOwner() == null || !vehicle.getOwner().getUserId().equals(userId)) {
-            return "Bạn không phải chủ sở hữu xe này!";
+            // ⭐️ TỐI ƯU: Ném lỗi
+            throw new RuntimeException("Bạn không phải chủ sở hữu xe này!");
         }
 
         // ❌ Nếu xe đang thuộc nhóm khác → chặn
         if (!"available".equalsIgnoreCase(vehicle.getStatus())) {
-            return "Xe này hiện đang thuộc nhóm khác hoặc đang chờ duyệt!";
+            // ⭐️ TỐI ƯU: Ném lỗi
+            throw new RuntimeException("Xe này hiện đang thuộc nhóm khác hoặc đang chờ duyệt!");
         }
 
         // ✅ Tạo nhóm chia sẻ xe
         CoOwnershipGroup group = CoOwnershipGroup.builder()
                 .vehicle(vehicle)
-                .createdBy(creator) // ĐÃ SỬA: created_by -> createdBy
-                .groupName(request.getGroupName()) // ĐÃ SỬA: group_name -> groupName
+                .createdBy(creator)
+                .groupName(request.getGroupName())
                 .description(request.getDescription())
-                .estimatedValue(request.getEstimatedValue()) // ĐÃ SỬA: estimated_value -> estimatedValue
+                .estimatedValue(request.getEstimatedValue())
                 .status("recruiting")
-                .approvalStatus("pending")  // ĐÃ SỬA: approval_status -> approvalStatus
-                .createdAt(new Date()) // Giả định trường này là 'createdAt'
+                .approvalStatus("pending")
+                .createdAt(new Date())
                 .build();
 
         groupRepository.save(group);
@@ -151,23 +149,23 @@ public class GroupService {
      */
     public java.util.List<UserGroupResponse> getUserGroups(Long userId) {
         java.util.List<GroupMember> userMemberships = groupMemberRepository.findByUser_UserIdAndJoinStatus(userId, "active");
-        
+
         return userMemberships.stream().map(member -> {
             CoOwnershipGroup group = member.getGroup();
             Vehicle vehicle = group.getVehicle();
-            
+
             // Tính toán monthly fee (giả sử = estimatedValue / 60 tháng)
             Double monthlyFee = group.getEstimatedValue() != null ? group.getEstimatedValue() / 60 : 0.0;
-            
+
             // Kiểm tra role (creator = admin, others = member)
             String role = group.getCreatedBy().getUserId().equals(userId) ? "admin" : "member";
-            
+
             // Tính tổng ownership percentage của nhóm
             java.util.List<GroupMember> allMembers = groupMemberRepository.findByGroup_GroupIdAndJoinStatus(group.getGroupId(), "active");
             Double totalOwnership = allMembers.stream()
                     .mapToDouble(m -> m.getOwnershipPercentage() != null ? m.getOwnershipPercentage() : 0.0)
                     .sum();
-            
+
             return UserGroupResponse.builder()
                     .id(group.getGroupId())
                     .groupName(group.getGroupName())
@@ -191,18 +189,16 @@ public class GroupService {
      * Chỉnh sửa thông tin nhóm (chỉ admin nhóm)
      */
     public String editGroup(Long groupId, EditGroupRequest request, Long userId) {
-        Optional<CoOwnershipGroup> groupOpt = groupRepository.findById(groupId);
-        if (groupOpt.isEmpty()) {
-            throw new RuntimeException("Nhóm không tồn tại!");
-        }
-        
-        CoOwnershipGroup group = groupOpt.get();
-        
+        // ⭐️ TỐI ƯU: Ném lỗi
+        CoOwnershipGroup group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new RuntimeException("Nhóm không tồn tại!"));
+
         // Kiểm tra quyền admin
         if (!group.getCreatedBy().getUserId().equals(userId)) {
+            // ⭐️ TỐI ƯU: Ném lỗi
             throw new RuntimeException("Bạn không có quyền chỉnh sửa nhóm này!");
         }
-        
+
         // Cập nhật thông tin
         if (request.getGroupName() != null && !request.getGroupName().trim().isEmpty()) {
             group.setGroupName(request.getGroupName());
@@ -214,6 +210,7 @@ public class GroupService {
             // Kiểm tra không được nhỏ hơn số thành viên hiện tại
             int currentMembers = countActiveMembers(groupId);
             if (request.getMaxMembers() < currentMembers) {
+                // ⭐️ TỐI ƯU: Ném lỗi
                 throw new RuntimeException("Số thành viên tối đa không được nhỏ hơn số thành viên hiện tại (" + currentMembers + ")!");
             }
             group.setMaxMembers(request.getMaxMembers());
@@ -221,7 +218,7 @@ public class GroupService {
         if (request.getMinOwnershipPercentage() != null) {
             group.setMinOwnershipPercentage(request.getMinOwnershipPercentage());
         }
-        
+
         groupRepository.save(group);
         return "Cập nhật thông tin nhóm thành công!";
     }
@@ -230,32 +227,30 @@ public class GroupService {
      * Xóa nhóm (chỉ admin nhóm)
      */
     public String deleteGroup(Long groupId, Long userId) {
-        Optional<CoOwnershipGroup> groupOpt = groupRepository.findById(groupId);
-        if (groupOpt.isEmpty()) {
-            throw new RuntimeException("Nhóm không tồn tại!");
-        }
-        
-        CoOwnershipGroup group = groupOpt.get();
-        
+        // ⭐️ TỐI ƯU: Ném lỗi
+        CoOwnershipGroup group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new RuntimeException("Nhóm không tồn tại!"));
+
         // Kiểm tra quyền admin
         if (!group.getCreatedBy().getUserId().equals(userId)) {
+            // ⭐️ TỐI ƯU: Ném lỗi
             throw new RuntimeException("Bạn không có quyền xóa nhóm này!");
         }
-        
+
         // Xóa tất cả thành viên trước
         java.util.List<GroupMember> members = groupMemberRepository.findByGroup_GroupId(groupId);
         groupMemberRepository.deleteAll(members);
-        
+
         // Cập nhật trạng thái xe về available
         Vehicle vehicle = group.getVehicle();
         if (vehicle != null) {
             vehicle.setStatus("available");
             vehicleRepository.save(vehicle);
         }
-        
+
         // Xóa nhóm
         groupRepository.delete(group);
-        
+
         return "Xóa nhóm thành công!";
     }
 
@@ -263,33 +258,34 @@ public class GroupService {
      * Chấp nhận yêu cầu tham gia (admin nhóm)
      */
     public String acceptJoinRequest(Long requestId, Long userId) {
-        Optional<GroupMember> memberOpt = groupMemberRepository.findById(requestId);
-        if (memberOpt.isEmpty()) {
-            throw new RuntimeException("Yêu cầu không tồn tại!");
-        }
-        
-        GroupMember member = memberOpt.get();
+        // ⭐️ TỐI ƯU: Ném lỗi
+        GroupMember member = groupMemberRepository.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("Yêu cầu không tồn tại!"));
+
         CoOwnershipGroup group = member.getGroup();
-        
+
         // Kiểm tra quyền admin
         if (!group.getCreatedBy().getUserId().equals(userId)) {
+            // ⭐️ TỐI ƯU: Ném lỗi
             throw new RuntimeException("Bạn không có quyền duyệt yêu cầu cho nhóm này!");
         }
-        
+
         if (!"pending".equals(member.getJoinStatus())) {
+            // ⭐️ TỐI ƯU: Ném lỗi
             throw new RuntimeException("Yêu cầu đã được xử lý trước đó!");
         }
-        
+
         // Kiểm tra giới hạn thành viên
         int currentMembers = countActiveMembers(group.getGroupId());
         if (currentMembers >= group.getMaxMembers()) {
+            // ⭐️ TỐI ƯU: Ném lỗi
             throw new RuntimeException("Nhóm đã đạt giới hạn thành viên!");
         }
-        
+
         // Chấp nhận yêu cầu
         member.setJoinStatus("active");
         groupMemberRepository.save(member);
-        
+
         return "Đã chấp nhận yêu cầu tham gia của " + member.getUser().getFullName();
     }
 
@@ -297,34 +293,30 @@ public class GroupService {
      * Xóa thành viên khỏi nhóm (admin nhóm)
      */
     public String removeMember(Long groupId, Long memberId, Long userId) {
-        Optional<CoOwnershipGroup> groupOpt = groupRepository.findById(groupId);
-        if (groupOpt.isEmpty()) {
-            throw new RuntimeException("Nhóm không tồn tại!");
-        }
-        
-        CoOwnershipGroup group = groupOpt.get();
-        
+        // ⭐️ TỐI ƯU: Ném lỗi
+        CoOwnershipGroup group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new RuntimeException("Nhóm không tồn tại!"));
+
         // Kiểm tra quyền admin
         if (!group.getCreatedBy().getUserId().equals(userId)) {
+            // ⭐️ TỐI ƯU: Ném lỗi
             throw new RuntimeException("Bạn không có quyền xóa thành viên khỏi nhóm này!");
         }
-        
+
         // Tìm thành viên cần xóa
-        Optional<GroupMember> memberOpt = groupMemberRepository.findByGroup_GroupIdAndUser_UserId(groupId, memberId);
-        if (memberOpt.isEmpty()) {
-            throw new RuntimeException("Thành viên không tồn tại trong nhóm!");
-        }
-        
-        GroupMember member = memberOpt.get();
-        
+        // ⭐️ TỐI ƯU: Ném lỗi
+        GroupMember member = groupMemberRepository.findByGroup_GroupIdAndUser_UserId(groupId, memberId)
+                .orElseThrow(() -> new RuntimeException("Thành viên không tồn tại trong nhóm!"));
+
         // Không cho phép xóa chính mình (admin)
         if (member.getUser().getUserId().equals(userId)) {
+            // ⭐️ TỐI ƯU: Ném lỗi
             throw new RuntimeException("Không thể xóa chính mình khỏi nhóm!");
         }
-        
+
         // Xóa thành viên
         groupMemberRepository.delete(member);
-        
+
         return "Đã xóa " + member.getUser().getFullName() + " khỏi nhóm!";
     }
 
@@ -333,20 +325,19 @@ public class GroupService {
      */
     public java.util.List<GroupMemberResponse> getGroupMembers(Long groupId, Long userId) {
         // Kiểm tra user có quyền xem thành viên không (phải là thành viên của nhóm)
-        Optional<GroupMember> userMemberOpt = groupMemberRepository.findByGroup_GroupIdAndUser_UserId(groupId, userId);
-        if (userMemberOpt.isEmpty()) {
-            throw new RuntimeException("Bạn không có quyền xem thành viên của nhóm này!");
-        }
-        
+        // ⭐️ TỐI ƯU: Ném lỗi
+        groupMemberRepository.findByGroup_GroupIdAndUser_UserId(groupId, userId)
+                .orElseThrow(() -> new RuntimeException("Bạn không có quyền xem thành viên của nhóm này!"));
+
         java.util.List<GroupMember> members = groupMemberRepository.findByGroup_GroupIdAndJoinStatus(groupId, "active");
-        
+
         return members.stream().map(member -> {
             User user = member.getUser();
             CoOwnershipGroup group = member.getGroup();
-            
+
             // Xác định role
             String role = group.getCreatedBy().getUserId().equals(user.getUserId()) ? "admin" : "member";
-            
+
             return GroupMemberResponse.builder()
                     .id(member.getMemberId())
                     .userId(user.getUserId())
@@ -365,34 +356,33 @@ public class GroupService {
      */
     public Optional<GroupMemberResponse> getGroupMemberById(Long groupId, Long memberId, Long userId) {
         // Kiểm tra user có quyền xem không
-        Optional<GroupMember> userMemberOpt = groupMemberRepository.findByGroup_GroupIdAndUser_UserId(groupId, userId);
-        if (userMemberOpt.isEmpty()) {
-            return Optional.empty();
-        }
-        
+        // ⭐️ TỐI ƯU: Ném lỗi
+        groupMemberRepository.findByGroup_GroupIdAndUser_UserId(groupId, userId)
+                .orElseThrow(() -> new RuntimeException("Bạn không có quyền xem thông tin này!"));
+
         Optional<GroupMember> memberOpt = groupMemberRepository.findByGroup_GroupIdAndUser_UserId(groupId, memberId);
         if (memberOpt.isEmpty()) {
-            return Optional.empty();
+            return Optional.empty(); // Trả empty để controller ném lỗi 404
         }
-        
+
         GroupMember member = memberOpt.get();
         User user = member.getUser();
         CoOwnershipGroup group = member.getGroup();
-        
+
         String role = group.getCreatedBy().getUserId().equals(user.getUserId()) ? "admin" : "member";
-        
-        GroupMemberResponse response = 
-            GroupMemberResponse.builder()
-                .id(member.getMemberId())
-                .userId(user.getUserId())
-                .userName(user.getFullName())
-                .userEmail(user.getEmail())
-                .ownershipPercentage(member.getOwnershipPercentage())
-                .role(role)
-                .joinedAt(member.getJoinDate())
-                .status(member.getJoinStatus())
-                .build();
-                
+
+        GroupMemberResponse response =
+                GroupMemberResponse.builder()
+                        .id(member.getMemberId())
+                        .userId(user.getUserId())
+                        .userName(user.getFullName())
+                        .userEmail(user.getEmail())
+                        .ownershipPercentage(member.getOwnershipPercentage())
+                        .role(role)
+                        .joinedAt(member.getJoinDate())
+                        .status(member.getJoinStatus())
+                        .build();
+
         return Optional.of(response);
     }
 }

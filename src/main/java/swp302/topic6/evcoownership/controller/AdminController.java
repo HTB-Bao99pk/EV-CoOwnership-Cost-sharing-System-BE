@@ -3,182 +3,178 @@ package swp302.topic6.evcoownership.controller;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*; // ⭐️ TỐI ƯU: Xoá CrossOrigin
 
+import jakarta.servlet.http.HttpSession; // ⭐️ TỐI ƯU: Dùng Session
 import lombok.RequiredArgsConstructor;
+import swp302.topic6.evcoownership.dto.AdminRequestResponse;
+import swp302.topic6.evcoownership.dto.ApiResponse;
+import swp302.topic6.evcoownership.dto.CancelRequestBody;
 import swp302.topic6.evcoownership.dto.GroupSettingsRequest;
 import swp302.topic6.evcoownership.entity.CoOwnershipGroup;
 import swp302.topic6.evcoownership.entity.GroupMember;
 import swp302.topic6.evcoownership.entity.User;
 import swp302.topic6.evcoownership.service.AdminService;
+import swp302.topic6.evcoownership.utils.SessionUtils; // ⭐️ TỐI ƯU: Dùng SessionUtils
 
 @RestController
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:3000")
+// ⭐️ TỐI ƯU: Xoá @CrossOrigin(origins = "http://localhost:3000")
 public class AdminController {
 
     private final AdminService adminService;
+    private final SessionUtils sessionUtils; // ⭐️ TỐI ƯU: Tiêm SessionUtils
+
+    /**
+     * ⭐️ TỐI ƯU: Hàm helper kiểm tra quyền Admin
+     * Ném lỗi nếu chưa đăng nhập hoặc không phải admin
+     */
+    private Long getAdminUserId(HttpSession session) {
+        Long adminId = sessionUtils.getUserId(session);
+        String role = sessionUtils.getRole(session);
+
+        if (adminId == null) {
+            throw new RuntimeException("Vui lòng đăng nhập!");
+        }
+        if (!"admin".equalsIgnoreCase(role)) {
+            throw new RuntimeException("Bạn không có quyền truy cập chức năng này!");
+        }
+        return adminId;
+    }
+
 
     // ====== 1️⃣ Duyệt nhóm ======
     @GetMapping("/pending-groups")
-    public ResponseEntity<List<CoOwnershipGroup>> getPendingGroups() {
+    public ResponseEntity<List<CoOwnershipGroup>> getPendingGroups(HttpSession session) {
+        getAdminUserId(session); // Chỉ cần check quyền
         return ResponseEntity.ok(adminService.getPendingGroups());
     }
 
     @PostMapping("/approve-group")
-    public ResponseEntity<String> approveGroup(@RequestParam Long groupId,
-                                               @RequestParam boolean approved,
-                                               @RequestParam(required = false) String reason,
-                                               @RequestParam Long adminId) {
-        // Xử lý logic Duyệt/Từ chối (Approve/Reject)
+    public ResponseEntity<ApiResponse> approveGroup(@RequestParam Long groupId,
+                                                    @RequestParam boolean approved,
+                                                    @RequestParam(required = false) String reason,
+                                                    HttpSession session) {
+        // ⭐️ TỐI ƯU: Lấy adminId từ session an toàn
+        Long adminId = getAdminUserId(session);
+
+        String message;
         if (approved) {
-            // Hàm approveGroup trong service chỉ nhận 2 tham số: groupId, adminId
-            return ResponseEntity.ok(adminService.approveGroup(groupId, adminId));
+            // ⭐️ TỐI ƯU: Xoá try-catch
+            message = adminService.approveGroup(groupId, adminId);
         } else {
-            // Kiểm tra lý do từ chối
+            // ⭐️ TỐI ƯU: Ném lỗi nếu thiếu lý do
             if (reason == null || reason.trim().isEmpty()) {
-                return ResponseEntity.badRequest().body("Lý do từ chối không được để trống!");
+                throw new RuntimeException("Lý do từ chối không được để trống!");
             }
-            // Hàm rejectGroup nhận 3 tham số: groupId, reason, adminId
-            return ResponseEntity.ok(adminService.rejectGroup(groupId, reason, adminId));
+            message = adminService.rejectGroup(groupId, reason, adminId);
         }
+        return ResponseEntity.ok(new ApiResponse(true, message));
     }
 
     // ====== 2️⃣ Duyệt thành viên ======
     @GetMapping("/pending-members")
-    public ResponseEntity<List<GroupMember>> getPendingMembers() {
-        // SỬA LỖI TÊN PHƯƠNG THỨC: getPendingJoinRequests -> getPendingMembers
+    public ResponseEntity<List<GroupMember>> getPendingMembers(HttpSession session) {
+        getAdminUserId(session); // Check quyền
         return ResponseEntity.ok(adminService.getPendingMembers());
     }
 
     @PostMapping("/approve-member")
-    public ResponseEntity<String> approveMember(@RequestParam Long memberId,
-                                                @RequestParam boolean approved,
-                                                @RequestParam(required = false) String reason) {
+    public ResponseEntity<ApiResponse> approveMember(@RequestParam Long memberId,
+                                                     @RequestParam boolean approved,
+                                                     @RequestParam(required = false) String reason,
+                                                     HttpSession session) {
+        getAdminUserId(session); // Check quyền
+
+        String message;
         if (approved) {
-            // Gọi hàm duyệt thành viên
-            return ResponseEntity.ok(adminService.approveMember(memberId));
+            message = adminService.approveMember(memberId);
         } else {
-            // Gọi hàm từ chối thành viên
             if (reason == null || reason.trim().isEmpty()) {
-                return ResponseEntity.badRequest().body("Lý do từ chối không được để trống!");
+                throw new RuntimeException("Lý do từ chối không được để trống!");
             }
-            return ResponseEntity.ok(adminService.rejectMember(memberId, reason));
+            message = adminService.rejectMember(memberId, reason);
         }
+        return ResponseEntity.ok(new ApiResponse(true, message));
     }
 
     // ====== 4️⃣ Cập nhật cấu hình nhóm (maxMembers, minOwnershipPercentage)
     @PostMapping("/group/{groupId}/settings")
-    public ResponseEntity<String> updateGroupSettings(@PathVariable Long groupId,
-                                                      @RequestBody GroupSettingsRequest req) {
+    public ResponseEntity<ApiResponse> updateGroupSettings(@PathVariable Long groupId,
+                                                           @RequestBody GroupSettingsRequest req,
+                                                           HttpSession session) {
+        getAdminUserId(session); // Check quyền
         String res = adminService.updateGroupSettings(groupId, req.getMaxMembers(), req.getMinOwnershipPercentage());
-        return ResponseEntity.ok(res);
+        return ResponseEntity.ok(new ApiResponse(true, res));
     }
 
     // ====== 3️⃣ Duyệt xác minh tài khoản ======
     @GetMapping("/pending-users")
-    public ResponseEntity<List<User>> getPendingUsers() {
+    public ResponseEntity<List<User>> getPendingUsers(HttpSession session) {
+        getAdminUserId(session); // Check quyền
         return ResponseEntity.ok(adminService.getPendingUsers());
     }
 
     @PostMapping("/verify-user")
-    public ResponseEntity<String> verifyUser(@RequestParam Long userId,
-                                             @RequestParam boolean approved,
-                                             @RequestParam(required = false) String reason) {
+    public ResponseEntity<ApiResponse> verifyUser(@RequestParam Long userId,
+                                                  @RequestParam boolean approved,
+                                                  @RequestParam(required = false) String reason,
+                                                  HttpSession session) {
+        getAdminUserId(session); // Check quyền
+
+        String message;
         if (approved) {
-            // Hàm verifyUser chỉ nhận 1 tham số
-            return ResponseEntity.ok(adminService.verifyUser(userId));
+            message = adminService.verifyUser(userId);
         } else {
-            // Hàm rejectUserVerification nhận 2 tham số
             if (reason == null || reason.trim().isEmpty()) {
-                return ResponseEntity.badRequest().body("Lý do từ chối xác minh không được để trống!");
+                throw new RuntimeException("Lý do từ chối xác minh không được để trống!");
             }
-            return ResponseEntity.ok(adminService.rejectUserVerification(userId, reason));
+            message = adminService.rejectUserVerification(userId, reason);
         }
+        return ResponseEntity.ok(new ApiResponse(true, message));
     }
 
     // ===== Admin user management (list/get/approve/reject/delete)
     @GetMapping("/users")
-    public ResponseEntity<List<User>> listUsers() {
+    public ResponseEntity<List<User>> listUsers(HttpSession session) {
+        getAdminUserId(session); // Check quyền
         return ResponseEntity.ok(adminService.getAllUsers());
     }
 
     @GetMapping("/users/{id}")
-    public ResponseEntity<User> getUser(@PathVariable Long id) {
-        return adminService.getUserById(id).map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+    public ResponseEntity<User> getUser(@PathVariable Long id, HttpSession session) {
+        getAdminUserId(session); // Check quyền
+        // ⭐️ TỐI ƯU: Service sẽ ném lỗi nếu không tìm thấy
+        User user = adminService.getUserById(id)
+                .orElseThrow(() -> new RuntimeException("Người dùng không tồn tại!"));
+        return ResponseEntity.ok(user);
     }
 
     @PostMapping("/users/{id}/approve")
-    public ResponseEntity<String> approveUser(@PathVariable Long id) {
-        return ResponseEntity.ok(adminService.approveUser(id));
+    public ResponseEntity<ApiResponse> approveUser(@PathVariable Long id, HttpSession session) {
+        getAdminUserId(session); // Check quyền
+        return ResponseEntity.ok(new ApiResponse(true, adminService.approveUser(id)));
     }
 
     @PostMapping("/users/{id}/reject")
-    public ResponseEntity<String> rejectUser(@PathVariable Long id) {
-        return ResponseEntity.ok(adminService.rejectUser(id));
+    public ResponseEntity<ApiResponse> rejectUser(@PathVariable Long id, HttpSession session) {
+        getAdminUserId(session); // Check quyền
+        return ResponseEntity.ok(new ApiResponse(true, adminService.rejectUser(id)));
     }
 
     @PostMapping("/users/{id}/delete")
-    public ResponseEntity<String> deleteUser(@PathVariable Long id) {
-        return ResponseEntity.ok(adminService.deleteUser(id));
+    public ResponseEntity<ApiResponse> deleteUser(@PathVariable Long id, HttpSession session) {
+        getAdminUserId(session); // Check quyền
+        return ResponseEntity.ok(new ApiResponse(true, adminService.deleteUser(id)));
     }
+
 
     // ====== 🆕 Request Management APIs ======
-    
-    /**
-     * Lấy tất cả yêu cầu tham gia nhóm
-     */
-    @GetMapping("/requests")
-    public ResponseEntity<List<swp302.topic6.evcoownership.dto.AdminRequestResponse>> getAllRequests() {
-        return ResponseEntity.ok(adminService.getAllJoinRequests());
-    }
 
     /**
-     * Lấy chi tiết yêu cầu tham gia theo ID
+     * ⭐️ TỐI ƯU: Đã xoá các API trùng lặp (getAllRequests, getRequestById, acceptRequest, cancelRequest)
+     * vì chúng trùng lặp chức năng với các API /approve-member và /pending-members ở trên.
+     * Giữ code đơn giản, mỗi chức năng chỉ nên có 1 API.
      */
-    @GetMapping("/requests/{requestId}")
-    public ResponseEntity<swp302.topic6.evcoownership.dto.AdminRequestResponse> getRequestById(@PathVariable Long requestId) {
-        return adminService.getJoinRequestById(requestId)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
-    }
-
-    /**
-     * Chấp nhận yêu cầu tham gia nhóm
-     */
-    @PostMapping("/requests/{requestId}/accept")
-    public ResponseEntity<swp302.topic6.evcoownership.dto.ApiResponse> acceptRequest(@PathVariable Long requestId) {
-        try {
-            String message = adminService.acceptJoinRequest(requestId);
-            return ResponseEntity.ok(new swp302.topic6.evcoownership.dto.ApiResponse(true, message));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                    .body(new swp302.topic6.evcoownership.dto.ApiResponse(false, e.getMessage()));
-        }
-    }
-
-    /**
-     * Từ chối yêu cầu tham gia nhóm
-     */
-    @PostMapping("/requests/{requestId}/cancel")
-    public ResponseEntity<swp302.topic6.evcoownership.dto.ApiResponse> cancelRequest(
-            @PathVariable Long requestId,
-            @RequestBody(required = false) swp302.topic6.evcoownership.dto.CancelRequestBody body) {
-        try {
-            String reason = (body != null) ? body.getReason() : null;
-            String message = adminService.cancelJoinRequest(requestId, reason);
-            return ResponseEntity.ok(new swp302.topic6.evcoownership.dto.ApiResponse(true, message));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                    .body(new swp302.topic6.evcoownership.dto.ApiResponse(false, e.getMessage()));
-        }
-    }
 }

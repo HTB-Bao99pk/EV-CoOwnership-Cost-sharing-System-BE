@@ -1,18 +1,15 @@
 package swp302.topic6.evcoownership.service;
 
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Base64;
-
-import org.springframework.stereotype.Service;
-
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 import swp302.topic6.evcoownership.dto.RegisterRequest;
 import swp302.topic6.evcoownership.entity.User;
 import swp302.topic6.evcoownership.repository.UserRepository;
+
+import java.io.IOException;
+import java.nio.file.*;
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -21,67 +18,56 @@ public class RegisterService {
     private final UserRepository userRepository;
 
     public String register(RegisterRequest request) {
-        // Kiểm tra email đã tồn tại
+        // 1️⃣ Kiểm tra email trùng
         if (userRepository.existsByEmail(request.getEmail())) {
             return "Email đã tồn tại!";
         }
 
-        //Kiểm tra CCCD đã tồn tại
+        // 2️⃣ Kiểm tra CCCD trùng
         if (userRepository.existsByCccd(request.getCccd())) {
             return "CCCD đã tồn tại!";
         }
 
-    // Tạo user mới
-    User newUser = new User();
-    newUser.setFullName(request.getFullName());
-    newUser.setEmail(request.getEmail());
-    newUser.setPasswordHash(request.getPassword());
-    newUser.setCccd(request.getCccd());
-    newUser.setDriverLicense(request.getDriverLicense());
-    newUser.setBirthday(request.getBirthday());
-    newUser.setLocation(request.getLocation());
-    newUser.setRole("user");
-    newUser.setVerificationStatus("pending");
+        // 3️⃣ Lưu file ảnh (nếu có)
+        String cccdFrontUrl = saveFile(request.getCccdFront(), "cccd_front");
+        String cccdBackUrl = saveFile(request.getCccdBack(), "cccd_back");
+        String driverLicenseUrl = saveFile(request.getDriverLicenseImg(), "driver_license");
 
-    // Lưu ảnh nếu FE gửi base64 và thiết lập URL/đường dẫn trong user
-    String cccdFrontPath = saveBase64Image(request.getCccdFrontBase64(), "cccd_front");
-    String cccdBackPath = saveBase64Image(request.getCccdBackBase64(), "cccd_back");
-    String driverLicensePath = saveBase64Image(request.getDriverLicenseBase64(), "driver_license");
+        // 4️⃣ Tạo đối tượng User
+        User newUser = new User();
+        newUser.setFullName(request.getFullName());
+        newUser.setEmail(request.getEmail());
+        newUser.setPasswordHash(request.getPassword());
+        newUser.setCccd(request.getCccd());
+        newUser.setDriverLicense(request.getDriverLicense());
+        newUser.setBirthday(request.getBirthday());
+        newUser.setLocation(request.getLocation());
+        newUser.setRole("user");
+        newUser.setVerificationStatus("pending");
+        newUser.setCreatedAt(LocalDateTime.now());
+        newUser.setCccdFrontUrl(cccdFrontUrl);
+        newUser.setCccdBackUrl(cccdBackUrl);
+        newUser.setDriverLicenseUrl(driverLicenseUrl);
 
-    newUser.setCccdFrontUrl(cccdFrontPath);
-    newUser.setCccdBackUrl(cccdBackPath);
-    newUser.setDriverLicenseUrl(driverLicensePath);
-
-    userRepository.save(newUser);
-    return "success";
+        userRepository.save(newUser);
+        return "Đăng ký thành công!";
     }
-    private String saveBase64Image(String base64Data, String prefix) {
-        if (base64Data == null || base64Data.isEmpty()) return null;
+
+    private String saveFile(MultipartFile file, String prefix) {
+        if (file == null || file.isEmpty()) return null;
 
         try {
-            // Tạo thư mục nếu chưa có
             Path uploadDir = Paths.get("uploads");
             Files.createDirectories(uploadDir);
 
-            // Loại bỏ tiền tố "data:image/png;base64," nếu có
-            String base64Image = base64Data.contains(",") ?
-                    base64Data.split(",")[1] : base64Data;
-
-            // Giải mã base64
-            byte[] imageBytes = Base64.getDecoder().decode(base64Image);
-
-            // Tạo tên file duy nhất
-            String fileName = prefix + "_" + System.currentTimeMillis() + ".png";
+            String fileName = prefix + "_" + System.currentTimeMillis() + "_" + file.getOriginalFilename();
             Path filePath = uploadDir.resolve(fileName);
 
-            // Ghi file ra ổ đĩa
-            try (FileOutputStream fos = new FileOutputStream(filePath.toFile())) {
-                fos.write(imageBytes);
-            }
+            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 
             return filePath.toString();
         } catch (IOException e) {
-            throw new RuntimeException("Lỗi khi lưu ảnh: " + e.getMessage());
+            throw new RuntimeException("Lỗi khi lưu file: " + e.getMessage());
         }
     }
 }
