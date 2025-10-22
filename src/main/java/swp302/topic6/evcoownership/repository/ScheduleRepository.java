@@ -10,11 +10,11 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
 
     List<Schedule> findByGroupId(Long groupId);
 
-    // Kiểm tra trùng lịch trong cùng group
-    List<Schedule> findByGroupIdAndEndTimeAfterAndStartTimeBefore(
-            Long groupId, LocalDateTime start, LocalDateTime end
-    );
+    List<Schedule> findByUserId(Long userId);
 
-    // Lấy lịch của user trong 3 tháng gần nhất
-    List<Schedule> findByUserIdAndGroupIdAndStartTimeAfter(Long userId, Long groupId, LocalDateTime after);
+    List<Schedule> findByGroupIdAndEndTimeAfterAndStartTimeBefore(
+            Long groupId, LocalDateTime start, LocalDateTime end);
+
+    List<Schedule> findByUserIdAndGroupIdAndStartTimeAfter(
+            Long userId, Long groupId, LocalDateTime after);
 }
