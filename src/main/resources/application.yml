@@ -1,0 +1,39 @@
+spring:
+  datasource:
+    url: jdbc:sqlserver://localhost:1433;databaseName=EVCoOwnership;encrypt=true;trustServerCertificate=true
+    username: sa
+    password: 12345
+    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.SQLServerDialect
+
+  # ✅ Session configuration cho Spring Security
+  servlet:
+    session:
+      cookie:
+        name: JSESSIONID
+        path: /
+        http-only: true
+        secure: false # TODO: set true trong production với HTTPS
+        same-site: lax
+        max-age: 24h
+      timeout: 24h
+
+# ✅ Server configuration
+server:
+  port: 8080
+  servlet:
+    context-path: /
+    session:
+      cookie:
+        http-only: true
+        secure: false # TODO: set true trong production với HTTPS
