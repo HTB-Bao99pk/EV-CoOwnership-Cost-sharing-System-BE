@@ -3,7 +3,7 @@ package swp302.topic6.evcoownership.controller;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import swp302.topic6.evcoownership.entity.Vote;
-import swp302.topic6.evcoownership.entity.VoteResponse;
+import swp302.topic6.evcoownership.dto.VoteResponse;
 import swp302.topic6.evcoownership.service.VoteService;
 
 import java.util.List;

@@ -3,7 +3,7 @@ package swp302.topic6.evcoownership.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import swp302.topic6.evcoownership.entity.Vote;
-import swp302.topic6.evcoownership.entity.VoteResponse;
+import swp302.topic6.evcoownership.dto.VoteResponse;
 import swp302.topic6.evcoownership.repository.VoteRepository;
 import swp302.topic6.evcoownership.repository.VoteResponseRepository;
 

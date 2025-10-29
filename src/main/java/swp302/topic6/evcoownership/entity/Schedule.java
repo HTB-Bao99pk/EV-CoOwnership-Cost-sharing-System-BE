@@ -30,8 +30,17 @@ public class Schedule {
     private LocalDateTime endTime;
 
     @Column(name = "status")
-    private String status = "booked";
+    private String status = "scheduled"; // scheduled / cancelled / cancelled_late / completed
 
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Column(name = "actual_end_time")
+    private LocalDateTime actualEndTime; // thời gian thực tế trả xe
+
+    @Column(name = "battery_level")
+    private Double batteryLevel; // % pin khi trả xe
+
+    @Column(name = "penalty_amount")
+    private Double penaltyAmount = 0.0; // tổng tiền phạt (pin yếu, trễ, hủy gấp)
 }

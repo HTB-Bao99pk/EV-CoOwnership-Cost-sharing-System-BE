@@ -1,4 +1,4 @@
-package swp302.topic6.evcoownership.entity;
+package swp302.topic6.evcoownership.dto;
 
 import jakarta.persistence.*;
 import lombok.*;

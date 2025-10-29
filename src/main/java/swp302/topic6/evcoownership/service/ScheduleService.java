@@ -2,117 +2,156 @@ package swp302.topic6.evcoownership.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import swp302.topic6.evcoownership.dto.*;
-import swp302.topic6.evcoownership.entity.*;
-import swp302.topic6.evcoownership.repository.*;
+import swp302.topic6.evcoownership.dto.ApiResponse;
+import swp302.topic6.evcoownership.dto.ScheduleRequest;
+import swp302.topic6.evcoownership.dto.ScheduleResponse;
+import swp302.topic6.evcoownership.entity.GroupMember;
+import swp302.topic6.evcoownership.entity.Schedule;
+import swp302.topic6.evcoownership.entity.User;
+import swp302.topic6.evcoownership.repository.GroupMemberRepository;
+import swp302.topic6.evcoownership.repository.ScheduleRepository;
+import swp302.topic6.evcoownership.repository.UserRepository;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
 public class ScheduleService {
 
     private final ScheduleRepository scheduleRepository;
+    private final UserRepository userRepository;
     private final GroupMemberRepository groupMemberRepository;
 
-    // 🧩 Helper
-    private <T> ApiResponse<T> response(boolean success, String message, T data) {
-        return new ApiResponse<>(success, message, data);
+    // =============================
+    // 1️⃣ Tạo mới lịch đặt xe
+    // =============================
+    public ApiResponse<ScheduleResponse> createSchedule(ScheduleRequest request) {
+        Optional<User> userOpt = userRepository.findById(request.getUserId());
+        Optional<GroupMember> groupMemberOpt = groupMemberRepository.findById(request.getGroupId());
+
+        if (userOpt.isEmpty() || groupMemberOpt.isEmpty()) {
+            return response(false, "Không tìm thấy người dùng hoặc nhóm!", null);
+        }
+
+        Schedule schedule = Schedule.builder()
+                .groupId(request.getGroupId())
+                .userId(request.getUserId())
+                .startTime(request.getStartTime())
+                .endTime(request.getEndTime())
+                .status("scheduled")
+                .penaltyAmount(0.0) // reset penalty
+                .build();
+
+        scheduleRepository.save(schedule);
+        return response(true, "Tạo lịch thành công!", mapToResponse(schedule));
     }
 
-    public ApiResponse<ScheduleResponse> createBooking(ScheduleRequest request) {
-        var memberOpt = groupMemberRepository
-                .findByGroup_GroupIdAndUser_UserId(request.getGroupId(), request.getUserId());
+    // =============================
+    // 2️⃣ Hủy lịch (phạt nếu <24h)
+    // =============================
+    public ApiResponse<ScheduleResponse> cancelSchedule(Long scheduleId) {
+        Optional<Schedule> opt = scheduleRepository.findById(scheduleId);
+        if (opt.isEmpty()) return response(false, "Không tìm thấy lịch!", null);
 
-        if (memberOpt.isEmpty())
-            return response(false, "Bạn chưa tham gia nhóm này!", null);
+        Schedule schedule = opt.get();
+        if (!"scheduled".equalsIgnoreCase(schedule.getStatus())) {
+            return response(false, "Chỉ có thể hủy lịch đang ở trạng thái 'scheduled'!", null);
+        }
 
-        GroupMember member = memberOpt.get();
-        if (!"approved".equalsIgnoreCase(member.getJoinStatus()))
-            return response(false, "Tài khoản của bạn chưa được duyệt để đặt lịch!", null);
+        Duration diff = Duration.between(LocalDateTime.now(), schedule.getStartTime());
+        double penalty = 0;
 
-        double percent = member.getOwnershipPercentage();
+        if (diff.toHours() < 24) {
+            penalty = 10_000; // ví dụ phạt nhỏ, bạn có thể tăng tuỳ ý
+            schedule.setStatus("cancelled_late");
+        } else {
+            schedule.setStatus("cancelled");
+        }
 
-        // Kiểm tra trùng hoặc cách 1h
-        List<Schedule> overlaps = scheduleRepository
-                .findByGroupIdAndEndTimeAfterAndStartTimeBefore(
-                        request.getGroupId(),
-                        request.getStartTime().minusHours(1),
-                        request.getEndTime().plusHours(1)
-                );
-        if (!overlaps.isEmpty())
-            return response(false, "Xe đã được đặt hoặc chưa cách đủ 1 tiếng!", null);
+        schedule.setPenaltyAmount(penalty);
+        scheduleRepository.save(schedule);
 
-        // Kiểm tra quota 3 tháng
-        LocalDateTime threeMonthsAgo = LocalDateTime.now().minusMonths(3);
-        List<Schedule> recent = scheduleRepository
-                .findByUserIdAndGroupIdAndStartTimeAfter(request.getUserId(), request.getGroupId(), threeMonthsAgo);
+        String msg = (penalty > 0)
+                ? "Hủy lịch gấp (<24h) - phạt " + String.format("%,.0f VNĐ", penalty)
+                : "Hủy lịch thành công!";
+        return response(true, msg, mapToResponse(schedule));
+    }
 
-        double usedHours = recent.stream()
-                .mapToDouble(b -> Duration.between(b.getStartTime(), b.getEndTime()).toHours())
+    // =============================
+    // 3️⃣ Trả xe (tính phạt pin yếu & trễ)
+    // =============================
+    public ApiResponse<ScheduleResponse> returnVehicle(Long scheduleId, double batteryLevel, LocalDateTime actualEndTime) {
+        Optional<Schedule> opt = scheduleRepository.findById(scheduleId);
+        if (opt.isEmpty()) return response(false, "Không tìm thấy lịch!", null);
+
+        Schedule schedule = opt.get();
+        if (!List.of("scheduled", "in_use").contains(schedule.getStatus().toLowerCase())) {
+            return response(false, "Lịch không hợp lệ để trả xe!", null);
+        }
+
+        double fine = 0;
+
+        // ⚡ 1. Phạt pin yếu
+        if (batteryLevel < 90) {
+            fine += 150_000;
+            if (batteryLevel < 75) {
+                fine += (75 - batteryLevel) * 5_000;
+            }
+        }
+
+        // ⏰ 2. Phạt trả muộn
+        if (actualEndTime.isAfter(schedule.getEndTime())) {
+            Duration lateDuration = Duration.between(schedule.getEndTime(), actualEndTime);
+            long lateHours = lateDuration.toHours();
+            long blocks = lateHours / 3 + (lateHours % 3 > 0 ? 1 : 0);
+            fine += blocks * 1_000_000;
+
+            // cập nhật thời gian kết thúc mới
+            schedule.setEndTime(actualEndTime);
+        }
+
+        // ✅ Lưu thông tin
+        schedule.setBatteryLevel(batteryLevel);
+        schedule.setActualEndTime(actualEndTime);
+        schedule.setPenaltyAmount(fine);
+        schedule.setStatus("completed");
+        scheduleRepository.save(schedule);
+
+        String message = "Trả xe thành công!";
+        if (fine > 0) message += " Tổng tiền phạt: " + String.format("%,.0f VNĐ", fine);
+
+        return response(true, message, mapToResponse(schedule));
+    }
+
+    // =============================
+    // 4️⃣ Tổng kết nhóm
+    // =============================
+    public ApiResponse<Map<String, Object>> getGroupSummary(Long groupId) {
+        List<Schedule> list = scheduleRepository.findByGroupId(groupId);
+
+        long totalTrips = list.size();
+        long completed = list.stream().filter(s -> "completed".equalsIgnoreCase(s.getStatus())).count();
+        long cancelled = list.stream().filter(s -> s.getStatus().startsWith("cancelled")).count();
+        double totalPenalty = list.stream()
+                .filter(s -> s.getPenaltyAmount() != null)
+                .mapToDouble(Schedule::getPenaltyAmount)
                 .sum();
 
-        double newHours = Duration.between(request.getStartTime(), request.getEndTime()).toHours();
-        double maxHours = 2160 * (percent / 100);
+        Map<String, Object> summary = new HashMap<>();
+        summary.put("totalTrips", totalTrips);
+        summary.put("completed", completed);
+        summary.put("cancelled", cancelled);
+        summary.put("totalPenalty", totalPenalty);
 
-        if (usedHours + newHours > maxHours)
-            return response(false, "Bạn đã vượt giới hạn giờ cho phép (" + maxHours + "h)", null);
-
-        // Lưu
-        Schedule schedule = new Schedule();
-        schedule.setGroupId(request.getGroupId());
-        schedule.setUserId(request.getUserId());
-        schedule.setStartTime(request.getStartTime());
-        schedule.setEndTime(request.getEndTime());
-        schedule.setStatus("scheduled");
-        scheduleRepository.save(schedule);
-
-        ScheduleResponse res = mapToResponse(schedule, member);
-        return response(true, "Đặt lịch thành công!", res);
+        return response(true, "Tổng kết nhóm", summary);
     }
 
-    public ApiResponse<List<ScheduleResponse>> getSchedulesByGroup(Long groupId) {
-        List<Schedule> schedules = scheduleRepository.findByGroupId(groupId);
-        List<ScheduleResponse> responses = schedules.stream()
-                .map(s -> mapToResponse(s, null))
-                .toList();
-        return response(true, "Danh sách lịch", responses);
-    }
-
-    public ApiResponse<ScheduleResponse> cancelBooking(Long scheduleId) {
-        Optional<Schedule> opt = scheduleRepository.findById(scheduleId);
-        if (opt.isEmpty())
-            return response(false, "Không tìm thấy lịch!", null);
-
-        Schedule schedule = opt.get();
-        schedule.setStatus("cancelled");
-        scheduleRepository.save(schedule);
-
-        return response(true, "Hủy lịch thành công!", mapToResponse(schedule, null));
-    }
-
-    public ApiResponse<ScheduleResponse> updateStatus(Long scheduleId, String status) {
-        Optional<Schedule> opt = scheduleRepository.findById(scheduleId);
-        if (opt.isEmpty())
-            return response(false, "Không tìm thấy lịch!", null);
-
-        Schedule schedule = opt.get();
-        schedule.setStatus(status);
-        scheduleRepository.save(schedule);
-
-        return response(true, "Cập nhật trạng thái thành công!", mapToResponse(schedule, null));
-    }
-
-    public ApiResponse<ScheduleResponse> getScheduleDetail(Long scheduleId) {
-        Optional<Schedule> opt = scheduleRepository.findById(scheduleId);
-        return opt.map(s -> response(true, "Chi tiết lịch", mapToResponse(s, null)))
-                .orElseGet(() -> response(false, "Không tìm thấy lịch!", null));
-    }
-
-    private ScheduleResponse mapToResponse(Schedule s, GroupMember m) {
+    // =============================
+    // 🔁 Tiện ích chung
+    // =============================
+    private ScheduleResponse mapToResponse(Schedule s) {
         return ScheduleResponse.builder()
                 .scheduleId(s.getScheduleId())
                 .groupId(s.getGroupId())
@@ -120,10 +159,14 @@ public class ScheduleService {
                 .startTime(s.getStartTime())
                 .endTime(s.getEndTime())
                 .status(s.getStatus())
-                .ownershipPercentage(m != null ? m.getOwnershipPercentage() : 0)
-                .userName(m != null ? m.getUser().getFullName() : null)
-                .groupName(m != null ? m.getGroup().getGroupName() : null)
-
                 .build();
+    }
+
+    private <T> ApiResponse<T> response(boolean success, String msg, T data) {
+        ApiResponse<T> res = new ApiResponse<>();
+        res.setSuccess(success);
+        res.setMessage(msg);
+        res.setData(data);
+        return res;
     }
 }

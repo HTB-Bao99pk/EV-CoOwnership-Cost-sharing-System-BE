@@ -3,8 +3,13 @@ package swp302.topic6.evcoownership.controller;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import swp302.topic6.evcoownership.dto.*;
+import swp302.topic6.evcoownership.dto.ApiResponse;
+import swp302.topic6.evcoownership.dto.ScheduleRequest;
+import swp302.topic6.evcoownership.dto.ScheduleResponse;
 import swp302.topic6.evcoownership.service.ScheduleService;
+
+import java.time.LocalDateTime;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/schedules")
@@ -13,28 +18,27 @@ public class ScheduleController {
 
     private final ScheduleService scheduleService;
 
-    @PostMapping("/create")
-    public ResponseEntity<ApiResponse<ScheduleResponse>> createBooking(@RequestBody ScheduleRequest request) {
-        return ResponseEntity.ok(scheduleService.createBooking(request));
+    @PostMapping
+    public ResponseEntity<ApiResponse<ScheduleResponse>> create(@RequestBody ScheduleRequest request) {
+        return ResponseEntity.ok(scheduleService.createSchedule(request));
     }
 
-    @GetMapping("/group/{groupId}")
-    public ResponseEntity<ApiResponse<?>> getSchedulesByGroup(@PathVariable Long groupId) {
-        return ResponseEntity.ok(scheduleService.getSchedulesByGroup(groupId));
+    @PutMapping("/{id}/cancel")
+    public ResponseEntity<ApiResponse<ScheduleResponse>> cancel(@PathVariable Long id) {
+        return ResponseEntity.ok(scheduleService.cancelSchedule(id));
     }
 
-    @PostMapping("/{id}/cancel")
-    public ResponseEntity<ApiResponse<?>> cancelBooking(@PathVariable Long id) {
-        return ResponseEntity.ok(scheduleService.cancelBooking(id));
+    @PutMapping("/{id}/return")
+    public ResponseEntity<ApiResponse<ScheduleResponse>> returnVehicle(
+            @PathVariable Long id,
+            @RequestParam double batteryLevel,
+            @RequestParam LocalDateTime actualEndTime
+    ) {
+        return ResponseEntity.ok(scheduleService.returnVehicle(id, batteryLevel, actualEndTime));
     }
 
-    @PatchMapping("/{id}/status")
-    public ResponseEntity<ApiResponse<?>> updateStatus(@PathVariable Long id, @RequestParam String status) {
-        return ResponseEntity.ok(scheduleService.updateStatus(id, status));
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<?>> getScheduleDetail(@PathVariable Long id) {
-        return ResponseEntity.ok(scheduleService.getScheduleDetail(id));
+    @GetMapping("/group/{groupId}/summary")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getGroupSummary(@PathVariable Long groupId) {
+        return ResponseEntity.ok(scheduleService.getGroupSummary(groupId));
     }
 }

@@ -66,7 +66,6 @@ public class AdminService {
     // 1.5️⃣ DUYỆT THÀNH VIÊN
     // ==========================
 
-    // SỬA: findByStatus -> findByJoinStatus
     public List<GroupMember> getPendingMembers() {
         return groupMemberRepository.findByJoinStatus("pending");
     }
@@ -77,7 +76,7 @@ public class AdminService {
             return "Yêu cầu tham gia không tồn tại!";
         }
         GroupMember member = memberOpt.get();
-        member.setJoinStatus("active"); // ĐÃ SỬA LỖI CUỐI: setStatus -> setJoinStatus
+        member.setJoinStatus("active");
         groupMemberRepository.save(member);
         return "✅ Yêu cầu tham gia đã được duyệt!";
     }
@@ -88,7 +87,7 @@ public class AdminService {
             return "Yêu cầu tham gia không tồn tại!";
         }
         GroupMember member = memberOpt.get();
-        member.setJoinStatus("rejected"); // ĐÃ SỬA LỖI CUỐI: setStatus -> setJoinStatus
+        member.setJoinStatus("rejected");
         groupMemberRepository.save(member);
         return "❌ Yêu cầu tham gia đã bị từ chối!";
     }
