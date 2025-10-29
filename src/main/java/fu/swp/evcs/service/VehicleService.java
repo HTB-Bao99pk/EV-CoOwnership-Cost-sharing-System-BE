@@ -16,7 +16,7 @@ import fu.swp.evcs.repository.VehicleRepository;
 import lombok.RequiredArgsConstructor;
 
 /**
- * ✅ VehicleService - Xử lý tất cả logic về vehicle
+ * VehicleService - Handles all vehicle-related logic
  */
 @Service
 @RequiredArgsConstructor
@@ -32,7 +32,7 @@ public class VehicleService {
     }
 
     /**
-     * Get by ID - THROW EXCEPTION nếu không tìm thấy
+     * Get by ID - Throws exception if not found
      */
     public VehicleResponse getById(Long id) {
         Vehicle vehicle = vehicleRepository.findById(id)

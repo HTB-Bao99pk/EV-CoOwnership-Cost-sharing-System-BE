@@ -15,12 +15,12 @@ import fu.swp.evcs.service.GroupService;
 import lombok.RequiredArgsConstructor;
 
 /**
- * ✅ GroupController - Clean controller, chỉ gọi service
- * 
- * Controller KHÔNG chứa logic, chỉ:
- * 1. Nhận request + @AuthenticationPrincipal User
- * 2. Gọi service (service xử lý validation + logic)
- * 3. Return response (1 dòng duy nhất)
+ * GroupController - Clean controller, only calls service
+ *
+ * Controller does NOT contain logic, only:
+ * 1. Receives request + @AuthenticationPrincipal User
+ * 2. Calls service (service handles validation + logic)
+ * 3. Returns response (single line only)
  */
 @RestController
 @RequestMapping("/api/groups")
@@ -30,9 +30,6 @@ public class GroupController {
     private final GroupService groupService;
     private final GroupJoinService groupJoinService;
 
-    /**
-     * 🟢 Tạo nhóm chia sẻ xe
-     */
     @PostMapping("/create")
     public ResponseEntity<String> createGroup(
             @RequestBody CreateGroupRequest request,
@@ -40,9 +37,6 @@ public class GroupController {
         return ResponseEntity.ok(groupService.createGroup(request, currentUser));
     }
 
-    /**
-     * 🟡 Gửi yêu cầu tham gia nhóm
-     */
     @PostMapping("/{groupId}/join")
     public ResponseEntity<String> requestJoinGroup(
             @PathVariable Long groupId,

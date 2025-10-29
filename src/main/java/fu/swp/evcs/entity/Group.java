@@ -10,8 +10,7 @@ import java.math.BigDecimal;
 import java.util.Date;
 
 /**
- * Bảng CoOwnershipGroups
- * Lưu thông tin nhóm chia sẻ xe
+ * CoOwnershipGroups table - Stores information about car sharing groups
  */
 @Entity
 @Table(name = "groups")
@@ -26,17 +25,17 @@ public class Group {
     @Column(name = "id")
     private Long id;
 
-    // 🔹 Xe thuộc nhóm này
+    // Vehicle belonging to this group
     @ManyToOne
     @JoinColumn(name = "vehicle_id", nullable = false)
     private Vehicle vehicle;
 
-    // 🔹 Người tạo nhóm (thường là chủ xe)
+    // Group creator (usually the vehicle owner)
     @ManyToOne
     @JoinColumn(name = "created_by", nullable = false)
     private User createdBy;
 
-    // 🔹 Admin duyệt nhóm
+    // Admin who approves the group
     @ManyToOne
     @JoinColumn(name = "approved_by")
     private User approvedBy;
@@ -47,7 +46,6 @@ public class Group {
     @Column(name = "description", length = 255)
     private String description;
 
-    // 🔹 recruiting, active, closed
     @Column(name = "status", length = 20)
     @Builder.Default
     private String status = "recruiting";
@@ -60,21 +58,19 @@ public class Group {
     @Builder.Default
     private Date createdAt = new Date();
 
-    // 🔹 pending, approved, rejected
     @Column(name = "approval_status", length = 20)
     @Builder.Default
     private String approvalStatus = "pending";
 
     @Column(name = "reject_reason", length = 255)
     private String rejectReason;
-    // Giới hạn số thành viên tối đa (mặc định 5)
+    // Maximum number of members limit (default 5)
     @Column(name = "max_members")
     @Builder.Default
     private Integer maxMembers = 5;
 
-    // Tỷ lệ sở hữu tối thiểu (%) để tham gia nhóm (mặc định 10.00)
+    // Minimum ownership percentage (%) to join the group (default 10.00)
     @Column(name = "min_ownership_percentage", precision = 5, scale = 2)
     @Builder.Default
     private BigDecimal minOwnershipPercentage = new BigDecimal("10.00");
 }
-

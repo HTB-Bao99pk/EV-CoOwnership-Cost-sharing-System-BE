@@ -19,12 +19,12 @@ public class Member {
     @Column(name = "id")
     private Long id;
 
-    // 🔹 Quan hệ với bảng CoOwnershipGroups
+    // Relationship with CoOwnershipGroups table
     @ManyToOne
     @JoinColumn(name = "group_id", nullable = false)
     private Group group;
 
-    // 🔹 Quan hệ với bảng Users
+    // Relationship with Users table
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
     private User user;

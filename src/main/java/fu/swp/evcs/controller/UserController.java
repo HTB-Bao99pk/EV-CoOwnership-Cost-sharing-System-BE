@@ -16,9 +16,6 @@ import fu.swp.evcs.entity.User;
 import fu.swp.evcs.service.UserService;
 import lombok.RequiredArgsConstructor;
 
-/**
- * ✅ UserController - Clean controller cho User CRUD
- */
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
@@ -26,25 +23,16 @@ public class UserController {
 
     private final UserService userService;
 
-    /**
-     * 🟢 GET: Danh sách tất cả users
-     */
     @GetMapping
     public ResponseEntity<List<User>> getAllUsers() {
         return ResponseEntity.ok(userService.getAllUsers());
     }
 
-    /**
-     * 🟢 GET: Chi tiết user theo ID
-     */
     @GetMapping("/{id}")
     public ResponseEntity<User> getUserById(@PathVariable Long id) {
         return ResponseEntity.ok(userService.getUserById(id));
     }
 
-    /**
-     * 🟢 PUT: Cập nhật thông tin user
-     */
     @PutMapping("/{id}")
     public ResponseEntity<User> updateUser(
             @PathVariable Long id,
@@ -53,9 +41,6 @@ public class UserController {
         return ResponseEntity.ok(userService.updateUser(id, userUpdate, currentUser));
     }
 
-    /**
-     * 🟢 DELETE: Xóa user
-     */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteUser(
             @PathVariable Long id,

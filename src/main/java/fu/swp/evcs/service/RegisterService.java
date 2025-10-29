@@ -19,9 +19,9 @@ import fu.swp.evcs.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 
 /**
- * ✅ RegisterService - Xử lý đăng ký user mới
- * Sử dụng PasswordEncoder để mã hóa mật khẩu
- * Throw exception thay vì return error string
+ * RegisterService - Handles new user registration
+ * Uses PasswordEncoder to encode passwords
+ * Throws exceptions instead of returning error strings
  */
 @Service
 @RequiredArgsConstructor
@@ -31,26 +31,22 @@ public class RegisterService {
     private final PasswordEncoder passwordEncoder;
 
     public ApiResponse<String> register(RegisterRequest request) {
-        // 1️⃣ Kiểm tra email trùng
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new BadRequestException("Email đã tồn tại!");
         }
 
-        // 2️⃣ Kiểm tra CCCD trùng
         if (userRepository.existsByCccd(request.getCccd())) {
             throw new BadRequestException("CCCD đã tồn tại!");
         }
 
-        // 3️⃣ Lưu file ảnh (nếu có)
         String cccdFrontUrl = saveFile(request.getCccdFront(), "cccd_front");
         String cccdBackUrl = saveFile(request.getCccdBack(), "cccd_back");
         String driverLicenseUrl = saveFile(request.getDriverLicenseImg(), "driver_license");
 
-        // 4️⃣ Tạo đối tượng User
         User newUser = User.builder()
                 .fullName(request.getFullName())
                 .email(request.getEmail())
-                .passwordHash(passwordEncoder.encode(request.getPassword())) // ✅ Mã hóa mật khẩu
+                .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .cccd(request.getCccd())
                 .driverLicense(request.getDriverLicense())
                 .birthday(request.getBirthday())

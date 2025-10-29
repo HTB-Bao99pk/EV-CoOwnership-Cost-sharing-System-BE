@@ -19,7 +19,7 @@ public class Vehicle {
 
 
     @Column(name = "license_plate", unique = true)
-    private String licensePlate;  // ✅ Thêm dòng này!
+    private String licensePlate;
 
     private String location;
     private String status; // Active, Maintenance, etc.

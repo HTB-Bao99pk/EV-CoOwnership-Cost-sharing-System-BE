@@ -22,14 +22,14 @@ import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 
 /**
- * ✅ AuthController - Clean controller, chỉ gọi service
- * 
- * Controller KHÔNG chứa logic, chỉ:
- * 1. Nhận request
- * 2. Gọi service
- * 3. Return response (1 dòng duy nhất)
- * 
- * Logic xử lý → Service
+ * AuthController - Clean controller, only calls service
+ *
+ * Controller does NOT contain logic, only:
+ * 1. Receives request
+ * 2. Calls service
+ * 3. Returns response (single line only)
+ *
+ * Logic processing → Service
  * Exception handling → GlobalExceptionHandler
  */
 @RestController
@@ -40,9 +40,6 @@ public class AuthController {
     private final LoginService loginService;
     private final RegisterService registerService;
 
-    /**
-     * 🔐 Login - Logic được xử lý trong LoginService
-     */
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<Map<String, Object>>> login(
             @RequestBody LoginRequest request, 
@@ -50,34 +47,22 @@ public class AuthController {
         return ResponseEntity.ok(loginService.login(request, httpRequest));
     }
 
-    /**
-     * 📝 Register - Logic được xử lý trong RegisterService
-     */
     @PostMapping(value = "/register", consumes = "multipart/form-data")
     public ResponseEntity<ApiResponse<String>> register(@ModelAttribute RegisterRequest request) {
         return ResponseEntity.ok(registerService.register(request));
     }
 
-    /**
-     * 👤 Get current user - Logic được xử lý trong LoginService
-     */
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getCurrentUser(
             @AuthenticationPrincipal User user) {
         return ResponseEntity.ok(loginService.getCurrentUser(user));
     }
 
-    /**
-     * 🚪 Logout - Logic được xử lý trong LoginService
-     */
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<String>> logout(HttpServletRequest request) {
         return ResponseEntity.ok(loginService.logout(request));
     }
 
-    /**
-     * 🔍 Check login status - Logic được xử lý trong LoginService
-     */
     @GetMapping("/status")
     public ResponseEntity<Map<String, Object>> checkLoginStatus(
             @AuthenticationPrincipal User user,
@@ -85,9 +70,6 @@ public class AuthController {
         return ResponseEntity.ok(loginService.checkLoginStatus(user, session));
     }
 
-    /**
-     * ℹ️ Info endpoint - Logic được xử lý trong LoginService
-     */
     @GetMapping("/info")
     public ResponseEntity<Map<String, String>> info() {
         return ResponseEntity.ok(loginService.getInfo());

@@ -19,7 +19,7 @@ import fu.swp.evcs.service.VoteService;
 import lombok.RequiredArgsConstructor;
 
 /**
- * ✅ VoteController - Clean controller, chỉ gọi service
+ * VoteController - Clean controller, only calls service
  */
 @RestController
 @RequestMapping("/api/votes")

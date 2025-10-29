@@ -15,9 +15,10 @@ spring:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.SQLServerDialect
-
-  # ✅ Session configuration cho Spring Security
+server:
+  port: 8080
   servlet:
+    context-path: /
     session:
       cookie:
         name: JSESSIONID
@@ -27,13 +28,3 @@ spring:
         same-site: lax
         max-age: 24h
       timeout: 24h
-
-# ✅ Server configuration
-server:
-  port: 8080
-  servlet:
-    context-path: /
-    session:
-      cookie:
-        http-only: true
-        secure: false # TODO: set true trong production với HTTPS

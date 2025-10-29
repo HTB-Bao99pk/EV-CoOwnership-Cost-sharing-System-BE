@@ -24,8 +24,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * User Entity - implement UserDetails để tích hợp trực tiếp với Spring Security
- * Không cần wrapper class, đơn giản và gọn hơn
+ * User Entity - implements UserDetails for direct integration with Spring Security
+ * No need for wrapper class, simpler and cleaner
  */
 @Entity
 @Table(name = "users")
@@ -70,7 +70,7 @@ public class User implements UserDetails {
     @Column(name = "location", nullable = false)
     private String location;
 
-    // 🧩 Các đường dẫn ảnh upload (có thể cho phép null nếu người dùng chưa upload)
+    // Image upload paths (may be null if user hasn't uploaded)
     @Column(name = "cccd_front_url", nullable = false)
     private String cccdFrontUrl;
 
@@ -87,65 +87,42 @@ public class User implements UserDetails {
         }
     }
 
-    // ============ UserDetails Implementation ============
-    
-    /**
-     * Trả về quyền của user - ROLE_ADMIN hoặc ROLE_USER
-     */
     @Override
     @JsonIgnore
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()));
     }
 
-    /**
-     * Trả về password đã hash
-     */
     @Override
     @JsonIgnore
     public String getPassword() {
         return passwordHash;
     }
 
-    /**
-     * Username cho Spring Security = email
-     */
     @Override
     @JsonIgnore
     public String getUsername() {
         return email;
     }
 
-    /**
-     * Account không bao giờ expired
-     */
     @Override
     @JsonIgnore
     public boolean isAccountNonExpired() {
         return true;
     }
 
-    /**
-     * Account không bao giờ bị lock
-     */
     @Override
     @JsonIgnore
     public boolean isAccountNonLocked() {
         return true;
     }
 
-    /**
-     * Credentials không bao giờ expired
-     */
     @Override
     @JsonIgnore
     public boolean isCredentialsNonExpired() {
         return true;
     }
 
-    /**
-     * Account chỉ enabled khi đã được verify bởi admin
-     */
     @Override
     @JsonIgnore
     public boolean isEnabled() {

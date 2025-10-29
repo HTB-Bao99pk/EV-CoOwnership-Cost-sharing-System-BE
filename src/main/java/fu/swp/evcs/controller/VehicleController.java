@@ -19,7 +19,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 /**
- * ✅ VehicleController - Clean controller, chỉ gọi service
+ * VehicleController - Clean controller, only calls service
  */
 @RestController
 @RequestMapping("/api/vehicles")

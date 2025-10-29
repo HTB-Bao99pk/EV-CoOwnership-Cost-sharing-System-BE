@@ -18,12 +18,12 @@ import fu.swp.evcs.service.AdminService;
 import lombok.RequiredArgsConstructor;
 
 /**
- * ✅ AdminController - Clean controller, chỉ gọi service
- * 
- * Controller KHÔNG chứa logic, chỉ:
- * 1. Nhận request
- * 2. Gọi service
- * 3. Return response (1 dòng duy nhất)
+ * AdminController - Clean controller, only calls service
+ *
+ * Controller does NOT contain logic, only:
+ * 1. Receives request
+ * 2. Calls service
+ * 3. Returns response (single line only)
  */
 @RestController
 @RequestMapping("/api/admin")
