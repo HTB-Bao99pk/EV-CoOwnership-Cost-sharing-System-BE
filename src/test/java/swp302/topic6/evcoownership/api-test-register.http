@@ -1,0 +1,25 @@
+###  Test Register API
+POST http://localhost:8080/api/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Huyvip",
+  "email": "huypro@gmail.com",
+  "password": "111111",
+  "cccd": "95521475001",
+  "driverLicense": "454515456A",
+  "birthday": "2005-10-10",
+  "location": "Vietnam",
+
+  "cccdFrontBase64": "iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDTAgAQDMyEASgB/xzhWz/AAAAAElFTkSuQmCC",
+  "cccdBackBase64": "iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDTAgAQDMyEASgB/xzhWz/AAAAAElFTkSuQmCC",
+  "driverLicenseBase64": "iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDTAgAQDMyEASgB/xzhWz/AAAAAElFTkSuQmCC"
+}
+###  Test Login API
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "vuong@example.com",
+  "password": "123456"
+}
