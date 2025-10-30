@@ -9,11 +9,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class LoginStatusDto {
+public class JoinGroupRequest {
     
-    private Boolean isAuthenticated;
-    private String sessionId;
-    private Long userId;
-    private String email;
-    private String role;
+    private Double proposedOwnershipPercentage;
+    
+    private String reason;
 }

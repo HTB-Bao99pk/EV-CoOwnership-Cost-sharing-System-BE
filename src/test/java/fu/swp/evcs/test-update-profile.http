@@ -1,0 +1,80 @@
+### Test Update Profile API
+### Endpoint: PUT /api/auth/me
+
+### 1. Update full profile (all fields)
+PUT http://localhost:8080/api/auth/me
+Content-Type: application/json
+
+{
+  "fullName": "Nguyen Van Updated",
+  "location": "Ho Chi Minh City",
+  "birthday": "1995-05-15",
+  "driverLicense": "UPDATE123456"
+}
+
+###
+
+### 2. Update only full name
+PUT http://localhost:8080/api/auth/me
+Content-Type: application/json
+
+{
+  "fullName": "New Full Name"
+}
+
+###
+
+### 3. Update only location
+PUT http://localhost:8080/api/auth/me
+Content-Type: application/json
+
+{
+  "location": "Da Nang"
+}
+
+###
+
+### 4. Update only birthday
+PUT http://localhost:8080/api/auth/me
+Content-Type: application/json
+
+{
+  "birthday": "1990-12-25"
+}
+
+###
+
+### 5. Update only driver license
+PUT http://localhost:8080/api/auth/me
+Content-Type: application/json
+
+{
+  "driverLicense": "DL987654321"
+}
+
+###
+
+### 6. Validation error - fullName too short
+PUT http://localhost:8080/api/auth/me
+Content-Type: application/json
+
+{
+  "fullName": "AB"
+}
+
+###
+
+### 7. Validation error - under 18 years old
+PUT http://localhost:8080/api/auth/me
+Content-Type: application/json
+
+{
+  "birthday": "2010-01-01"
+}
+
+###
+
+### 8. Get current profile to verify update
+GET http://localhost:8080/api/auth/me
+
+###

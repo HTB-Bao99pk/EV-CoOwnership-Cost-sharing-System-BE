@@ -14,9 +14,6 @@ import fu.swp.evcs.repository.VoteRepository;
 import fu.swp.evcs.repository.VoteResponseRepository;
 import lombok.RequiredArgsConstructor;
 
-/**
- * ✅ VoteService - Xử lý tất cả logic voting
- */
 @Service
 @RequiredArgsConstructor
 public class VoteService {
@@ -24,11 +21,7 @@ public class VoteService {
     private final VoteRepository voteRepository;
     private final VoteResponseRepository voteResponseRepository;
 
-    /**
-     * Tạo phiếu mới - XỬ LÝ VALIDATION
-     */
     public Vote createVote(Vote vote, User currentUser) {
-        // 1. Validation authentication
         if (currentUser == null) {
             throw new UnauthorizedException("Chưa đăng nhập");
         }
@@ -77,6 +70,13 @@ public class VoteService {
      */
     public List<VoteResponse> getVoteResults(Long voteId) {
         return voteResponseRepository.findByVoteId(voteId);
+    }
+
+    /**
+     * Xem tất cả vote
+     */
+    public List<Vote> getAllVotes() {
+        return voteRepository.findAll();
     }
 
     /**

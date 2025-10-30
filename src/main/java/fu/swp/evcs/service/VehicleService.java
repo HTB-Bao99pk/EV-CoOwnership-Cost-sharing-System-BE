@@ -31,6 +31,13 @@ public class VehicleService {
                 .collect(Collectors.toList());
     }
 
+    public List<VehicleResponse> getByOwnerId(Long ownerId) {
+        return vehicleRepository.findAll().stream()
+                .filter(v -> v.getOwner() != null && v.getOwner().getId().equals(ownerId))
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
+    }
+
     /**
      * Get by ID - Throws exception if not found
      */
@@ -63,10 +70,16 @@ public class VehicleService {
                 .brand(request.getBrand())
                 .licensePlate(request.getLicensePlate())
                 .location(request.getLocation())
-                .status(request.getStatus())
+                .status("pending_approval")
+                .registrationInfo(request.getRegistrationInfo())
+                .batteryCapacity(request.getBatteryCapacity())
+                .yearOfManufacture(request.getYearOfManufacture())
+                .imageUrl1(request.getImageUrl1())
+                .imageUrl2(request.getImageUrl2())
+                .imageUrl3(request.getImageUrl3())
+                .verificationStatus("pending")
                 .build();
 
-        // Set owner if ownerId is provided
         if (request.getOwnerId() != null) {
             User owner = userRepository.findById(request.getOwnerId())
                     .orElseThrow(() -> new ResourceNotFoundException("Owner not found with id: " + request.getOwnerId()));
@@ -80,10 +93,14 @@ public class VehicleService {
         existing.setBrand(request.getBrand());
         existing.setModel(request.getModel());
         existing.setLicensePlate(request.getLicensePlate());
-        existing.setStatus(request.getStatus());
         existing.setLocation(request.getLocation());
+        existing.setRegistrationInfo(request.getRegistrationInfo());
+        existing.setBatteryCapacity(request.getBatteryCapacity());
+        existing.setYearOfManufacture(request.getYearOfManufacture());
+        existing.setImageUrl1(request.getImageUrl1());
+        existing.setImageUrl2(request.getImageUrl2());
+        existing.setImageUrl3(request.getImageUrl3());
 
-        // Update owner if ownerId is provided
         if (request.getOwnerId() != null) {
             User owner = userRepository.findById(request.getOwnerId())
                     .orElseThrow(() -> new ResourceNotFoundException("Owner not found with id: " + request.getOwnerId()));
@@ -99,8 +116,18 @@ public class VehicleService {
                 .licensePlate(vehicle.getLicensePlate())
                 .location(vehicle.getLocation())
                 .status(vehicle.getStatus())
+                .registrationInfo(vehicle.getRegistrationInfo())
+                .batteryCapacity(vehicle.getBatteryCapacity())
+                .yearOfManufacture(vehicle.getYearOfManufacture())
+                .imageUrl1(vehicle.getImageUrl1())
+                .imageUrl2(vehicle.getImageUrl2())
+                .imageUrl3(vehicle.getImageUrl3())
+                .verificationStatus(vehicle.getVerificationStatus())
+                .rejectReason(vehicle.getRejectReason())
+                .verifiedAt(vehicle.getVerifiedAt())
                 .ownerId(vehicle.getOwner() != null ? vehicle.getOwner().getId() : null)
                 .ownerName(vehicle.getOwner() != null ? vehicle.getOwner().getFullName() : null)
+                .verifiedByName(vehicle.getVerifiedBy() != null ? vehicle.getVerifiedBy().getFullName() : null)
                 .build();
     }
 }

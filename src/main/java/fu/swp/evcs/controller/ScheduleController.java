@@ -1,13 +1,25 @@
 package fu.swp.evcs.controller;
 
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import fu.swp.evcs.dto.ApiResponse;
+import fu.swp.evcs.dto.CheckInRequest;
+import fu.swp.evcs.dto.CheckOutRequest;
 import fu.swp.evcs.dto.ScheduleRequest;
 import fu.swp.evcs.dto.ScheduleResponse;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import fu.swp.evcs.dto.*;
+import fu.swp.evcs.entity.User;
 import fu.swp.evcs.service.ScheduleService;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/schedules")
@@ -16,17 +28,20 @@ public class ScheduleController {
 
     private final ScheduleService scheduleService;
 
-    @PostMapping("/create")
+    @PostMapping
     public ResponseEntity<ApiResponse<ScheduleResponse>> createBooking(@RequestBody ScheduleRequest request) {
         return ResponseEntity.ok(scheduleService.createBooking(request));
     }
 
-    @GetMapping("/group/{groupId}")
-    public ResponseEntity<ApiResponse<?>> getSchedulesByGroup(@PathVariable Long groupId) {
-        return ResponseEntity.ok(scheduleService.getSchedulesByGroup(groupId));
+    @GetMapping
+    public ResponseEntity<ApiResponse<?>> getSchedules(@RequestParam(required = false) Long groupId) {
+        if (groupId != null) {
+            return ResponseEntity.ok(scheduleService.getSchedulesByGroup(groupId));
+        }
+        return ResponseEntity.ok(scheduleService.getAllSchedules());
     }
 
-    @PostMapping("/{id}/cancel")
+    @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<?>> cancelBooking(@PathVariable Long id) {
         return ResponseEntity.ok(scheduleService.cancelBooking(id));
     }
@@ -39,5 +54,21 @@ public class ScheduleController {
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<?>> getScheduleDetail(@PathVariable Long id) {
         return ResponseEntity.ok(scheduleService.getScheduleDetail(id));
+    }
+
+    @PostMapping("/{id}/check-in")
+    public ResponseEntity<ApiResponse<ScheduleResponse>> checkIn(
+            @PathVariable Long id,
+            @RequestBody CheckInRequest request,
+            @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(scheduleService.checkIn(id, request, currentUser));
+    }
+
+    @PostMapping("/{id}/check-out")
+    public ResponseEntity<ApiResponse<ScheduleResponse>> checkOut(
+            @PathVariable Long id,
+            @RequestBody CheckOutRequest request,
+            @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(scheduleService.checkOut(id, request, currentUser));
     }
 }

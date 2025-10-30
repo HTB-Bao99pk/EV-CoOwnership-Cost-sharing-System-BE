@@ -12,50 +12,34 @@ import fu.swp.evcs.exception.UnauthorizedException;
 import fu.swp.evcs.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 
-/**
- * ✅ UserService - Xử lý tất cả logic về User
- */
 @Service
 @RequiredArgsConstructor
 public class UserService {
 
     private final UserRepository userRepository;
 
-    /**
-     * 🟢 GET ALL: Danh sách tất cả users
-     */
     public List<User> getAllUsers() {
         return userRepository.findAll();
     }
 
-    /**
-     * 🟢 GET BY ID: Chi tiết user
-     */
     public User getUserById(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User không tồn tại với ID: " + id));
     }
 
-    /**
-     * 🟢 PUT: Cập nhật thông tin user
-     */
     @Transactional
     public User updateUser(Long id, User userUpdate, User currentUser) {
-        // 1. Validation authentication
         if (currentUser == null) {
             throw new UnauthorizedException("Vui lòng đăng nhập!");
         }
 
-        // 2. Kiểm tra quyền (chỉ user tự cập nhật thông tin của mình hoặc admin)
         if (!currentUser.getId().equals(id) && !"ADMIN".equals(currentUser.getRole())) {
             throw new ForbiddenException("Bạn không có quyền cập nhật thông tin user này!");
         }
 
-        // 3. Tìm user
         User existingUser = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User không tồn tại với ID: " + id));
 
-        // 4. Cập nhật thông tin
         if (userUpdate.getFullName() != null) {
             existingUser.setFullName(userUpdate.getFullName());
         }
@@ -75,12 +59,8 @@ public class UserService {
         return userRepository.save(existingUser);
     }
 
-    /**
-     * 🟢 DELETE: Xóa user
-     */
     @Transactional
     public void deleteUser(Long id, User currentUser) {
-        // 1. Validation authentication
         if (currentUser == null) {
             throw new UnauthorizedException("Vui lòng đăng nhập!");
         }

@@ -13,9 +13,9 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 
     List<Member> findByJoinStatus(String status);
 
-    // 🔹 Lấy tất cả thành viên trong một group (sử dụng field `id` của Group entity)
     List<Member> findByGroup_Id(Long groupId);
 
-    // 🔹 Tìm 1 thành viên cụ thể trong nhóm
+    List<Member> findByUser_Id(Long userId);
+
     Optional<Member> findByGroup_IdAndUser_Id(Long groupId, Long userId);
 }

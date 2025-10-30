@@ -1,0 +1,24 @@
+### Test API xem tất cả các nhóm
+GET http://localhost:8080/api/groups
+Content-Type: application/json
+
+###
+
+### Test API xem nhóm của tôi (cần đăng nhập)
+GET http://localhost:8080/api/groups/my-groups
+Content-Type: application/json
+Cookie: JSESSIONID=YOUR_SESSION_ID_HERE
+
+###
+
+### Test API xem chi tiết nhóm theo ID
+GET http://localhost:8080/api/groups/1
+Content-Type: application/json
+
+###
+
+### Test API xem nhóm đang tuyển thành viên
+GET http://localhost:8080/api/groups/recruiting
+Content-Type: application/json
+
+###

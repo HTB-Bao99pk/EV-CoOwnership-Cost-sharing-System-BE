@@ -31,8 +31,18 @@ public class VehicleRequest {
     @Size(max = 50, message = "Status must not exceed 50 characters")
     private String status;
 
-    @Size(max = 500, message = "Purpose must not exceed 500 characters")
-    private String purpose;
+    @Size(max = 500, message = "Registration info must not exceed 500 characters")
+    private String registrationInfo;
 
-    private Long ownerId; // ID của owner thay vì object User
+    private Integer batteryCapacity;
+
+    private Integer yearOfManufacture;
+
+    private String imageUrl1;
+
+    private String imageUrl2;
+
+    private String imageUrl3;
+
+    private Long ownerId;
 }

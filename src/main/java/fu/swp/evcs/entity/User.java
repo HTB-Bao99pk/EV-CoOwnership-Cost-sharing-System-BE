@@ -40,7 +40,7 @@ public class User implements UserDetails {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "full_name", nullable = false)
+    @Column(name = "full_name", nullable = false, columnDefinition = "NVARCHAR(255)")
     private String fullName;
 
     @Column(name = "email", nullable = false, unique = true)
@@ -67,7 +67,7 @@ public class User implements UserDetails {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "location", nullable = false)
+    @Column(name = "location", nullable = false, columnDefinition = "NVARCHAR(255)")
     private String location;
 
     // Image upload paths (may be null if user hasn't uploaded)

@@ -9,11 +9,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class LoginStatusDto {
+public class ReviewMemberRequest {
     
-    private Boolean isAuthenticated;
-    private String sessionId;
-    private Long userId;
-    private String email;
-    private String role;
+    private String action;
+    
+    private Double counterOfferPercentage;
+    
+    private String reason;
 }

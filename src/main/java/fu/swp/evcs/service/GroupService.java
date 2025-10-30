@@ -2,11 +2,13 @@ package fu.swp.evcs.service;
 
 import java.math.BigDecimal;
 import java.util.Date;
-import java.util.Optional;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
 import fu.swp.evcs.dto.CreateGroupRequest;
+import fu.swp.evcs.dto.GroupResponse;
 import fu.swp.evcs.entity.Group;
 import fu.swp.evcs.entity.Member;
 import fu.swp.evcs.entity.User;
@@ -20,14 +22,6 @@ import fu.swp.evcs.repository.MemberRepository;
 import fu.swp.evcs.repository.VehicleRepository;
 import lombok.RequiredArgsConstructor;
 
-/**
- * ✅ GroupService - Xử lý tất cả logic về nhóm chia sẻ xe
- * 
- * Service xử lý:
- * - Validation (authentication, authorization, business rules)
- * - Business logic
- * - Throw exceptions (GlobalExceptionHandler sẽ bắt)
- */
 @Service
 @RequiredArgsConstructor
 public class GroupService {
@@ -36,30 +30,22 @@ public class GroupService {
     private final VehicleRepository vehicleRepository;
     private final MemberRepository memberRepository;
 
-    /**
-     * 🟢 Chủ xe tạo nhóm chia sẻ xe
-     */
     public String createGroup(CreateGroupRequest request, User currentUser) {
-        // 1. Validation authentication
         if (currentUser == null) {
             throw new UnauthorizedException("Vui lòng đăng nhập!");
         }
         
-        // 2. Validation verification
         if (!"verified".equalsIgnoreCase(currentUser.getVerificationStatus())) {
             throw new ForbiddenException("Tài khoản chưa được xác minh!");
         }
         
-        // 3. Tìm vehicle
         Vehicle vehicle = vehicleRepository.findById(request.getVehicleId())
                 .orElseThrow(() -> new ResourceNotFoundException("Xe không tồn tại!"));
 
-        // 4. Kiểm tra quyền sở hữu
         if (vehicle.getOwner() == null || !vehicle.getOwner().getId().equals(currentUser.getId())) {
             throw new ForbiddenException("Bạn không phải chủ sở hữu xe này!");
         }
 
-        // 5. Kiểm tra xe đã nằm trong nhóm khác hay chưa
         boolean vehicleInOtherGroup = groupRepository.findAll().stream()
                 .anyMatch(g -> g.getVehicle() != null
                         && g.getVehicle().getId().equals(vehicle.getId())
@@ -70,12 +56,14 @@ public class GroupService {
             throw new BadRequestException("Xe này đã nằm trong nhóm khác hoặc nhóm đó đang hoạt động/chờ duyệt!");
         }
 
-        // 6. Kiểm tra trạng thái xe
         if (!"available".equalsIgnoreCase(vehicle.getStatus())) {
-            throw new BadRequestException("Xe này hiện không sẵn sàng để tạo nhóm!");
+            throw new BadRequestException("Xe này hiện không sẵn sàng để tạo nhóm! Trạng thái: " + vehicle.getStatus());
         }
 
-        // 7. Tạo nhóm chia sẻ
+        if (!"approved".equalsIgnoreCase(vehicle.getVerificationStatus())) {
+            throw new BadRequestException("Xe này chưa được admin duyệt!");
+        }
+
         Group group = Group.builder()
                 .vehicle(vehicle)
                 .createdBy(currentUser)
@@ -93,11 +81,9 @@ public class GroupService {
 
         groupRepository.save(group);
 
-        // 8. Cập nhật trạng thái xe
         vehicle.setStatus("pending_approval");
         vehicleRepository.save(vehicle);
 
-        // 9. Thêm người tạo nhóm vào danh sách thành viên (chủ nhóm)
         Member ownerMember = Member.builder()
                 .group(group)
                 .user(currentUser)
@@ -108,20 +94,100 @@ public class GroupService {
 
         memberRepository.save(ownerMember);
 
-        return "✅ Tạo nhóm thành công! Nhóm đang chờ admin duyệt.";
+        return "Tạo nhóm thành công! Nhóm đang chờ admin duyệt.";
     }
 
-    /**
-     * 🔍 Xem chi tiết nhóm
-     */
-    public Optional<Group> getGroupById(Long groupId) {
-        return groupRepository.findById(groupId);
+    public List<GroupResponse> getAllGroups() {
+        return groupRepository.findAll().stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
     }
 
-    /**
-     * 📋 Danh sách nhóm đang tuyển thành viên
-     */
-    public java.util.List<Group> getRecruitingGroups() {
+    public List<GroupResponse> getMyGroups(User currentUser) {
+        if (currentUser == null) {
+            throw new UnauthorizedException("Vui lòng đăng nhập!");
+        }
+
+        List<Member> myMemberships = memberRepository.findByUser_Id(currentUser.getId());
+        
+        return myMemberships.stream()
+                .map(member -> convertToResponse(member.getGroup()))
+                .collect(Collectors.toList());
+    }
+
+    public GroupResponse getGroupById(Long groupId) {
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Nhóm không tồn tại!"));
+        return convertToResponse(group);
+    }
+
+    public List<Group> getRecruitingGroups() {
         return groupRepository.findByStatus("recruiting");
+    }
+
+    public Double getAvailableOwnership(Long groupId) {
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Nhóm không tồn tại!"));
+        
+        Double totalOwnership = memberRepository.findByGroup_Id(groupId).stream()
+                .mapToDouble(Member::getOwnershipPercentage)
+                .sum();
+        
+        return 100.0 - totalOwnership;
+    }
+
+    public Member getMyOwnership(Long groupId, User currentUser) {
+        if (currentUser == null) {
+            throw new UnauthorizedException("Vui lòng đăng nhập!");
+        }
+
+        return memberRepository.findByGroup_IdAndUser_Id(groupId, currentUser.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Bạn không phải thành viên của nhóm này!"));
+    }
+
+    public String leaveGroup(Long groupId, User currentUser) {
+        if (currentUser == null) {
+            throw new UnauthorizedException("Vui lòng đăng nhập!");
+        }
+
+        groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Nhóm không tồn tại!"));
+
+        Member member = memberRepository.findByGroup_IdAndUser_Id(groupId, currentUser.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Bạn không phải thành viên của nhóm này!"));
+
+        if (member.getGroup().getCreatedBy().getId().equals(currentUser.getId())) {
+            throw new BadRequestException("Chủ nhóm không thể rời khỏi nhóm!");
+        }
+
+        memberRepository.delete(member);
+        return "Rời nhóm thành công!";
+    }
+
+    private GroupResponse convertToResponse(Group group) {
+        return GroupResponse.builder()
+                .id(group.getId())
+                .name(group.getName())
+                .description(group.getDescription())
+                .status(group.getStatus())
+                .approvalStatus(group.getApprovalStatus())
+                .estimatedValue(group.getEstimatedValue())
+                .maxMembers(group.getMaxMembers())
+                .minOwnershipPercentage(group.getMinOwnershipPercentage())
+                .totalOwnershipPercentage(group.getTotalOwnershipPercentage())
+                .isLocked(group.getIsLocked())
+                .contractUrl(group.getContractUrl())
+                .balance(group.getBalance())
+                .createdAt(group.getCreatedAt())
+                .vehicleId(group.getVehicle() != null ? group.getVehicle().getId() : null)
+                .vehicleBrand(group.getVehicle() != null ? group.getVehicle().getBrand() : null)
+                .vehicleModel(group.getVehicle() != null ? group.getVehicle().getModel() : null)
+                .vehicleLicensePlate(group.getVehicle() != null ? group.getVehicle().getLicensePlate() : null)
+                .createdById(group.getCreatedBy() != null ? group.getCreatedBy().getId() : null)
+                .createdByName(group.getCreatedBy() != null ? group.getCreatedBy().getFullName() : null)
+                .approvedById(group.getApprovedBy() != null ? group.getApprovedBy().getId() : null)
+                .approvedByName(group.getApprovedBy() != null ? group.getApprovedBy().getFullName() : null)
+                .rejectReason(group.getRejectReason())
+                .build();
     }
 }

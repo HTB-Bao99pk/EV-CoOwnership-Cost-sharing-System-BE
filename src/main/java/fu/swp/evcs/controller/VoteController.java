@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import fu.swp.evcs.dto.ApiResponse;
 import fu.swp.evcs.entity.User;
 import fu.swp.evcs.entity.Vote;
 import fu.swp.evcs.entity.VoteResponse;
@@ -28,28 +29,38 @@ public class VoteController {
 
     private final VoteService voteService;
 
-    @PostMapping("/create")
-    public ResponseEntity<Vote> createVote(
+    @PostMapping
+    public ResponseEntity<ApiResponse<Vote>> createVote(
             @RequestBody Vote vote,
             @AuthenticationPrincipal User currentUser) {
-        return ResponseEntity.ok(voteService.createVote(vote, currentUser));
+        Vote created = voteService.createVote(vote, currentUser);
+        return ResponseEntity.ok(ApiResponse.success("Tạo phiếu biểu quyết thành công", created));
     }
 
     @PostMapping("/{voteId}/submit")
-    public ResponseEntity<String> submitVote(
+    public ResponseEntity<ApiResponse<String>> submitVote(
             @PathVariable Long voteId,
             @RequestParam String response,
             @AuthenticationPrincipal User currentUser) {
-        return ResponseEntity.ok(voteService.submitVote(voteId, response, currentUser));
+        String message = voteService.submitVote(voteId, response, currentUser);
+        return ResponseEntity.ok(ApiResponse.success(message, message));
     }
 
     @GetMapping("/{voteId}/results")
-    public ResponseEntity<List<VoteResponse>> getResults(@PathVariable Long voteId) {
-        return ResponseEntity.ok(voteService.getVoteResults(voteId));
+    public ResponseEntity<ApiResponse<List<VoteResponse>>> getResults(@PathVariable Long voteId) {
+        List<VoteResponse> results = voteService.getVoteResults(voteId);
+        return ResponseEntity.ok(ApiResponse.success("Lấy kết quả biểu quyết thành công", results));
     }
 
-    @GetMapping("/group/{groupId}")
-    public ResponseEntity<List<Vote>> getVotesByGroup(@PathVariable Long groupId) {
-        return ResponseEntity.ok(voteService.getVotesByGroup(groupId));
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<Vote>>> getVotes(
+            @RequestParam(required = false) Long groupId) {
+        List<Vote> votes;
+        if (groupId != null) {
+            votes = voteService.getVotesByGroup(groupId);
+        } else {
+            votes = voteService.getAllVotes();
+        }
+        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách phiếu biểu quyết thành công", votes));
     }
 }

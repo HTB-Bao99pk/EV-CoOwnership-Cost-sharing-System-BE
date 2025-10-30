@@ -11,6 +11,7 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -20,9 +21,6 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-/**
- * SecurityConfig - Simple Spring Security configuration
- */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -32,16 +30,26 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .cors(Customizer.withDefaults())
-                
-                .csrf(csrf -> csrf
-                    .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                    .ignoringRequestMatchers("/api/auth/register", "/api/auth/login")
-                )
-                
+
+                .csrf(AbstractHttpConfigurer::disable) // Disable CSRF cho REST API
+
                 .sessionManagement(session -> session
                     .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                    .sessionFixation().migrateSession()
                     .maximumSessions(1)
                     .maxSessionsPreventsLogin(false)
+                )
+                
+                .logout(logout -> logout
+                    .logoutUrl("/api/auth/logout")
+                    .logoutSuccessHandler((request, response, authentication) -> {
+                        response.setStatus(200);
+                        response.setContentType("application/json");
+                        response.getWriter().write("{\"success\":true,\"message\":\"Đăng xuất thành công\",\"data\":null}");
+                    })
+                    .invalidateHttpSession(true)
+                    .clearAuthentication(true)
+                    .deleteCookies("JSESSIONID", "XSRF-TOKEN")
                 )
                 
                 .authorizeHttpRequests(auth -> auth
@@ -50,7 +58,9 @@ public class SecurityConfig {
                         "/v3/api-docs/**",
                         "/swagger-ui/**",
                         "/swagger-ui.html",
-                        "/api/auth/**"
+                        "/api/auth/register",
+                        "/api/auth/login",
+                        "/api/auth/status"
                     ).permitAll()
                     
                     .requestMatchers("/api/admin/**").hasRole("ADMIN")
@@ -71,24 +81,15 @@ public class SecurityConfig {
         return config.getAuthenticationManager();
     }
 
-    /**
-     * CORS configuration for Next.js frontend
-     * Eliminates the need for @CrossOrigin annotations on individual controllers
-     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         
         config.setAllowedOrigins(List.of("http://localhost:3000"));
-        
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        
         config.setAllowedHeaders(List.of("*"));
-        
         config.setAllowCredentials(true);
-        
         config.setExposedHeaders(List.of("X-XSRF-TOKEN"));
-        
         config.setMaxAge(Duration.ofHours(1));
         
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
