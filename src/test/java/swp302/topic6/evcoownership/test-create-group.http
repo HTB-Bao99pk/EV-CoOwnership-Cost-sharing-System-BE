@@ -1,9 +1,0 @@
-POST http://localhost:8080/api/groups/create?userId=1
-Content-Type: application/json
-
-{
-  "vehicleId": 2,
-  "groupName": "Chia sẻ Vinfast E34",
-  "description": "Nhóm đồng sở hữu xe điện khu vực TP.HCM",
-  "estimatedValue": 450000000
-}
