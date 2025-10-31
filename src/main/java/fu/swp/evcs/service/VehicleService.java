@@ -2,6 +2,7 @@ package fu.swp.evcs.service;
 
 import java.util.List;
 import java.util.stream.Collectors;
+import java.time.LocalDateTime; // Cần import này
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 
 /**
  * VehicleService - Handles all vehicle-related logic
+ * Đã thêm logic duyệt Admin đơn giản hóa (không có reason).
  */
 @Service
 @RequiredArgsConstructor
@@ -34,6 +36,14 @@ public class VehicleService {
     public List<VehicleResponse> getByOwnerId(Long ownerId) {
         return vehicleRepository.findAll().stream()
                 .filter(v -> v.getOwner() != null && v.getOwner().getId().equals(ownerId))
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
+    }
+
+    // NEW: Hỗ trợ GET /api/vehicles?verificationStatus=pending (Lọc theo Query Param)
+    // Cần phương thức findByVerificationStatus(String status) trong VehicleRepository
+    public List<VehicleResponse> getVehiclesByVerificationStatus(String status) {
+        return vehicleRepository.findByVerificationStatus(status).stream()
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
     }
@@ -58,10 +68,33 @@ public class VehicleService {
     public VehicleResponse update(Long id, VehicleRequest request) {
         Vehicle existing = vehicleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Xe không tồn tại với ID: " + id));
-        
+
         updateEntityFromRequest(existing, request);
         Vehicle savedVehicle = vehicleRepository.save(existing);
         return convertToResponse(savedVehicle);
+    }
+
+    // NEW: Hỗ trợ PATCH /api/vehicles/{id}/approval (Logic duyệt Admin ĐƠN GIẢN HÓA)
+    @Transactional
+    public String handleVehicleApproval(Long vehicleId, boolean approved, User currentAdmin) {
+        Vehicle vehicle = vehicleRepository.findById(vehicleId)
+                .orElseThrow(() -> new ResourceNotFoundException("Xe không tồn tại!"));
+
+        if (approved) {
+            vehicle.setVerificationStatus("approved");
+            vehicle.setStatus("available");
+            // vehicle.setRejectReason(null); <-- BỎ DÒNG NÀY
+        } else {
+            vehicle.setVerificationStatus("rejected");
+            vehicle.setStatus("rejected");
+            // vehicle.setRejectReason("Đã bị Admin từ chối duyệt."); <-- BỎ DÒNG NÀY
+        }
+
+        vehicle.setVerifiedBy(currentAdmin);
+        vehicle.setVerifiedAt(LocalDateTime.now());
+        vehicleRepository.save(vehicle);
+
+        return approved ? "Xe đã được duyệt thành công!" : "Xe đã bị từ chối duyệt.";
     }
 
     private Vehicle convertToEntity(VehicleRequest request) {
@@ -123,7 +156,7 @@ public class VehicleService {
                 .imageUrl2(vehicle.getImageUrl2())
                 .imageUrl3(vehicle.getImageUrl3())
                 .verificationStatus(vehicle.getVerificationStatus())
-                .rejectReason(vehicle.getRejectReason())
+                // .rejectReason(vehicle.getRejectReason()) <-- XÓA DÒNG NÀY NẾU KHÔNG CÓ TRƯỜNG TRONG ENTITY
                 .verifiedAt(vehicle.getVerifiedAt())
                 .ownerId(vehicle.getOwner() != null ? vehicle.getOwner().getId() : null)
                 .ownerName(vehicle.getOwner() != null ? vehicle.getOwner().getFullName() : null)

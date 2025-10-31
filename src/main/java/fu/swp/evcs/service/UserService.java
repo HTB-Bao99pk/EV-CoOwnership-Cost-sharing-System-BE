@@ -22,6 +22,12 @@ public class UserService {
         return userRepository.findAll();
     }
 
+    // NEW: Hỗ trợ GET /api/users?verificationStatus=pending (Lọc theo Query Param)
+    // Cần phương thức findByVerificationStatus(String status) trong UserRepository
+    public List<User> getUsersByVerificationStatus(String status) {
+        return userRepository.findByVerificationStatus(status);
+    }
+
     public User getUserById(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User không tồn tại với ID: " + id));
@@ -65,16 +71,32 @@ public class UserService {
             throw new UnauthorizedException("Vui lòng đăng nhập!");
         }
 
-        // 2. Kiểm tra quyền (chỉ admin mới được xóa user)
         if (!"ADMIN".equals(currentUser.getRole())) {
             throw new ForbiddenException("Chỉ admin mới có quyền xóa user!");
         }
 
-        // 3. Tìm user
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User không tồn tại với ID: " + id));
 
-        // 4. Xóa user
         userRepository.delete(user);
+    }
+
+    // NEW: Hỗ trợ PATCH /api/users/{id}/verification (Logic xác minh Admin)
+    @Transactional
+    public String handleUserVerification(Long userId, boolean approved) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Người dùng không tồn tại!"));
+
+        if (approved) {
+            user.setVerificationStatus("verified");
+            // user.setRejectReason(null); <--- BỎ DÒNG NÀY
+            userRepository.save(user);
+            return "Tài khoản " + user.getFullName() + " đã được xác minh!";
+        } else {
+            user.setVerificationStatus("rejected");
+            // user.setRejectReason("..."); <--- BỎ DÒNG NÀY
+            userRepository.save(user);
+            return "Tài khoản " + user.getFullName() + " bị từ chối xác minh.";
+        }
     }
 }
