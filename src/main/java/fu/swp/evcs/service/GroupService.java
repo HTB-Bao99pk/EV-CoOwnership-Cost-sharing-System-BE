@@ -3,6 +3,7 @@ package fu.swp.evcs.service;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -103,6 +104,18 @@ public class GroupService {
                 .collect(Collectors.toList());
     }
 
+    public List<GroupResponse> getGroupsFiltered(String status, String approvalStatus) {
+        List<Group> groups;
+        if (status != null && !status.isBlank()) {
+            groups = groupRepository.findByStatus(status);
+        } else if (approvalStatus != null && !approvalStatus.isBlank()) {
+            groups = groupRepository.findByApprovalStatus(approvalStatus);
+        } else {
+            groups = groupRepository.findAll();
+        }
+        return groups.stream().map(this::convertToResponse).collect(Collectors.toList());
+    }
+
     public List<GroupResponse> getMyGroups(User currentUser) {
         if (currentUser == null) {
             throw new UnauthorizedException("Vui lòng đăng nhập!");
@@ -119,6 +132,74 @@ public class GroupService {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new ResourceNotFoundException("Nhóm không tồn tại!"));
         return convertToResponse(group);
+    }
+
+    public GroupResponse updateGroup(Long groupId, Map<String, Object> requestBody) {
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Nhóm không tồn tại!"));
+
+        applyGroupUpdates(group, requestBody, true);
+        groupRepository.save(group);
+        return convertToResponse(group);
+    }
+
+    public GroupResponse patchGroup(Long groupId, Map<String, Object> requestBody) {
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Nhóm không tồn tại!"));
+
+        applyGroupUpdates(group, requestBody, false);
+        groupRepository.save(group);
+        return convertToResponse(group);
+    }
+
+    public void deleteGroup(Long groupId) {
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Nhóm không tồn tại!"));
+        groupRepository.delete(group);
+    }
+
+    private void applyGroupUpdates(Group group, Map<String, Object> body, boolean fullUpdate) {
+        if (body == null) return;
+        if (fullUpdate || body.containsKey("name")) {
+            Object v = body.get("name");
+            if (v != null) group.setName(String.valueOf(v));
+        }
+        if (fullUpdate || body.containsKey("description")) {
+            Object v = body.get("description");
+            if (v != null) group.setDescription(String.valueOf(v));
+        }
+        if (fullUpdate || body.containsKey("status")) {
+            Object v = body.get("status");
+            if (v != null) group.setStatus(String.valueOf(v));
+        }
+        if (fullUpdate || body.containsKey("approvalStatus")) {
+            Object v = body.get("approvalStatus");
+            if (v != null) group.setApprovalStatus(String.valueOf(v));
+        }
+        if (fullUpdate || body.containsKey("rejectReason")) {
+            Object v = body.get("rejectReason");
+            group.setRejectReason(v != null ? String.valueOf(v) : null);
+        }
+        if (fullUpdate || body.containsKey("estimatedValue")) {
+            Object v = body.get("estimatedValue");
+            if (v != null) group.setEstimatedValue(Double.valueOf(String.valueOf(v)));
+        }
+        if (fullUpdate || body.containsKey("maxMembers")) {
+            Object v = body.get("maxMembers");
+            if (v != null) group.setMaxMembers(Integer.valueOf(String.valueOf(v)));
+        }
+        if (fullUpdate || body.containsKey("minOwnershipPercentage")) {
+            Object v = body.get("minOwnershipPercentage");
+            if (v != null) group.setMinOwnershipPercentage(new java.math.BigDecimal(String.valueOf(v)));
+        }
+        if (fullUpdate || body.containsKey("isLocked")) {
+            Object v = body.get("isLocked");
+            if (v != null) group.setIsLocked(Boolean.parseBoolean(String.valueOf(v)));
+        }
+        if (fullUpdate || body.containsKey("balance")) {
+            Object v = body.get("balance");
+            if (v != null) group.setBalance(new java.math.BigDecimal(String.valueOf(v)));
+        }
     }
 
     public List<Group> getRecruitingGroups() {

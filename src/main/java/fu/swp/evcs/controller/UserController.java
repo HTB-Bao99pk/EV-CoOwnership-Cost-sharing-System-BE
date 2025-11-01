@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import fu.swp.evcs.dto.ApiResponse;
@@ -51,5 +52,14 @@ public class UserController {
             @AuthenticationPrincipal User currentUser) {
         userService.deleteUser(id, currentUser);
         return ResponseEntity.ok(ApiResponse.success("Xóa người dùng thành công", null));
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<ApiResponse<User>> patchUser(
+            @PathVariable Long id,
+            @RequestBody User userUpdate,
+            @AuthenticationPrincipal User currentUser) {
+        User updated = userService.updateUser(id, userUpdate, currentUser);
+        return ResponseEntity.ok(ApiResponse.success("Cập nhật người dùng (một phần) thành công", updated));
     }
 }

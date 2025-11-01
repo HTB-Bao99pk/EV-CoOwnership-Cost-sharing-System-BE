@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import fu.swp.evcs.dto.ApiResponse;
@@ -66,5 +67,14 @@ public class MemberController {
             @AuthenticationPrincipal User currentUser) {
         memberService.deleteMember(id, currentUser);
         return ResponseEntity.ok(ApiResponse.success("Xóa thành viên thành công", null));
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<ApiResponse<Member>> patchMember(
+            @PathVariable Long id,
+            @RequestBody Member memberUpdate,
+            @AuthenticationPrincipal User currentUser) {
+        Member updated = memberService.updateMember(id, memberUpdate, currentUser);
+        return ResponseEntity.ok(ApiResponse.success("Cập nhật thành viên (một phần) thành công", updated));
     }
 }

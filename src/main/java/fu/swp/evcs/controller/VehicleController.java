@@ -1,6 +1,5 @@
 package fu.swp.evcs.controller;
 
-import java.net.URI;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
@@ -11,6 +10,8 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import fu.swp.evcs.dto.ApiResponse;
@@ -51,8 +52,7 @@ public class VehicleController {
     @PostMapping
     public ResponseEntity<ApiResponse<VehicleResponse>> create(@RequestBody @Valid VehicleRequest vehicleRequest) {
         VehicleResponse created = vehicleService.create(vehicleRequest);
-        return ResponseEntity.created(URI.create("/api/vehicles/" + created.getVehicleId()))
-                .body(ApiResponse.success("Tạo xe thành công", created));
+        return ResponseEntity.ok(ApiResponse.success("Tạo xe thành công", created));
     }
 
     @PutMapping("/{id}")
@@ -61,5 +61,19 @@ public class VehicleController {
             @RequestBody @Valid VehicleRequest vehicleRequest) {
         VehicleResponse updated = vehicleService.update(id, vehicleRequest);
         return ResponseEntity.ok(ApiResponse.success("Cập nhật xe thành công", updated));
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<ApiResponse<VehicleResponse>> patch(
+            @PathVariable Long id,
+            @RequestBody VehicleRequest vehicleRequest) {
+        VehicleResponse updated = vehicleService.patch(id, vehicleRequest);
+        return ResponseEntity.ok(ApiResponse.success("Cập nhật một phần xe thành công", updated));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long id) {
+        vehicleService.delete(id);
+        return ResponseEntity.ok(ApiResponse.success("Xóa xe thành công", null));
     }
 }

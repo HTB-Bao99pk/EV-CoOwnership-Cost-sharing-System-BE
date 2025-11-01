@@ -46,9 +46,12 @@ public class ScheduleController {
         return ResponseEntity.ok(scheduleService.cancelBooking(id));
     }
 
-    @PatchMapping("/{id}/status")
-    public ResponseEntity<ApiResponse<?>> updateStatus(@PathVariable Long id, @RequestParam String status) {
-        return ResponseEntity.ok(scheduleService.updateStatus(id, status));
+    @PatchMapping("/{id}")
+    public ResponseEntity<ApiResponse<?>> patchSchedule(@PathVariable Long id, @RequestParam(required = false) String status) {
+        if (status != null) {
+            return ResponseEntity.ok(scheduleService.updateStatus(id, status));
+        }
+        return ResponseEntity.ok(ApiResponse.success("Không có thay đổi nào", null));
     }
 
     @GetMapping("/{id}")

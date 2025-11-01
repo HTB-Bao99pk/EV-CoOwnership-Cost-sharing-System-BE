@@ -64,6 +64,23 @@ public class VehicleService {
         return convertToResponse(savedVehicle);
     }
 
+    @Transactional
+    public VehicleResponse patch(Long id, VehicleRequest request) {
+        Vehicle existing = vehicleRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Xe không tồn tại với ID: " + id));
+
+        updateEntityFromRequestPartial(existing, request);
+        Vehicle savedVehicle = vehicleRepository.save(existing);
+        return convertToResponse(savedVehicle);
+    }
+
+    @Transactional
+    public void delete(Long id) {
+        Vehicle existing = vehicleRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Xe không tồn tại với ID: " + id));
+        vehicleRepository.delete(existing);
+    }
+
     private Vehicle convertToEntity(VehicleRequest request) {
         Vehicle vehicle = Vehicle.builder()
                 .model(request.getModel())
@@ -101,6 +118,24 @@ public class VehicleService {
         existing.setImageUrl2(request.getImageUrl2());
         existing.setImageUrl3(request.getImageUrl3());
 
+        if (request.getOwnerId() != null) {
+            User owner = userRepository.findById(request.getOwnerId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Owner not found with id: " + request.getOwnerId()));
+            existing.setOwner(owner);
+        }
+    }
+
+    private void updateEntityFromRequestPartial(Vehicle existing, VehicleRequest request) {
+        if (request.getBrand() != null) existing.setBrand(request.getBrand());
+        if (request.getModel() != null) existing.setModel(request.getModel());
+        if (request.getLicensePlate() != null) existing.setLicensePlate(request.getLicensePlate());
+        if (request.getLocation() != null) existing.setLocation(request.getLocation());
+        if (request.getRegistrationInfo() != null) existing.setRegistrationInfo(request.getRegistrationInfo());
+        if (request.getBatteryCapacity() != null) existing.setBatteryCapacity(request.getBatteryCapacity());
+        if (request.getYearOfManufacture() != null) existing.setYearOfManufacture(request.getYearOfManufacture());
+        if (request.getImageUrl1() != null) existing.setImageUrl1(request.getImageUrl1());
+        if (request.getImageUrl2() != null) existing.setImageUrl2(request.getImageUrl2());
+        if (request.getImageUrl3() != null) existing.setImageUrl3(request.getImageUrl3());
         if (request.getOwnerId() != null) {
             User owner = userRepository.findById(request.getOwnerId())
                     .orElseThrow(() -> new ResourceNotFoundException("Owner not found with id: " + request.getOwnerId()));

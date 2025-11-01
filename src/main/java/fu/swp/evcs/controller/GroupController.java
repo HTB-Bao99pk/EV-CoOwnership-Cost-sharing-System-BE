@@ -7,8 +7,12 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import fu.swp.evcs.dto.ApiResponse;
@@ -68,8 +72,10 @@ public class GroupController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<GroupResponse>>> getAllGroups() {
-        List<GroupResponse> groups = groupService.getAllGroups();
+    public ResponseEntity<ApiResponse<List<GroupResponse>>> getAllGroups(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String approvalStatus) {
+        List<GroupResponse> groups = groupService.getGroupsFiltered(status, approvalStatus);
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách nhóm thành công", groups));
     }
 
@@ -83,6 +89,28 @@ public class GroupController {
     public ResponseEntity<ApiResponse<GroupResponse>> getGroupById(@PathVariable Long groupId) {
         GroupResponse group = groupService.getGroupById(groupId);
         return ResponseEntity.ok(ApiResponse.success("Lấy thông tin nhóm thành công", group));
+    }
+
+    @PutMapping("/{groupId}")
+    public ResponseEntity<ApiResponse<GroupResponse>> updateGroup(
+            @PathVariable Long groupId,
+            @RequestBody java.util.Map<String, Object> requestBody) {
+        GroupResponse updated = groupService.updateGroup(groupId, requestBody);
+        return ResponseEntity.ok(ApiResponse.success("Cập nhật nhóm thành công", updated));
+    }
+
+    @PatchMapping("/{groupId}")
+    public ResponseEntity<ApiResponse<GroupResponse>> patchGroup(
+            @PathVariable Long groupId,
+            @RequestBody java.util.Map<String, Object> requestBody) {
+        GroupResponse updated = groupService.patchGroup(groupId, requestBody);
+        return ResponseEntity.ok(ApiResponse.success("Cập nhật nhóm (một phần) thành công", updated));
+    }
+
+    @DeleteMapping("/{groupId}")
+    public ResponseEntity<ApiResponse<Void>> deleteGroup(@PathVariable Long groupId) {
+        groupService.deleteGroup(groupId);
+        return ResponseEntity.ok(ApiResponse.success("Xóa nhóm thành công", null));
     }
 
     // ========== Member Management (Nested Resource) ==========
