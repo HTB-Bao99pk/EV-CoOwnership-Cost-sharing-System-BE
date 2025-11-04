@@ -67,13 +67,24 @@ public class GroupJoinService {
             throw new BadRequestException("Vui lòng nhập lý do tham gia!");
         }
 
-        boolean alreadyJoined = memberRepository.findAll().stream()
+        // Check if user already has pending or approved request
+        boolean hasPendingOrApproved = memberRepository.findAll().stream()
                 .anyMatch(m -> m.getGroup().getId().equals(groupId)
-                        && m.getUser().getId().equals(currentUser.getId()));
+                        && m.getUser().getId().equals(currentUser.getId())
+                        && ("pending".equalsIgnoreCase(m.getJoinStatus())
+                            || "approved".equalsIgnoreCase(m.getJoinStatus())));
 
-        if (alreadyJoined) {
+        if (hasPendingOrApproved) {
             throw new BadRequestException("Bạn đã gửi yêu cầu hoặc đã là thành viên của nhóm này!");
         }
+
+        // If user was rejected before, delete old record and allow new request
+        memberRepository.findAll().stream()
+                .filter(m -> m.getGroup().getId().equals(groupId)
+                        && m.getUser().getId().equals(currentUser.getId())
+                        && "rejected".equalsIgnoreCase(m.getJoinStatus()))
+                .findFirst()
+                .ifPresent(memberRepository::delete);
 
         Member member = Member.builder()
                 .group(group)
@@ -181,5 +192,78 @@ public class GroupJoinService {
         return approved
                 ? "Thành viên đã được duyệt vào nhóm!"
                 : "Yêu cầu tham gia đã bị từ chối!";
+    }
+
+    public String respondToCounterOffer(Long groupId, Long memberId, Boolean accept, User currentUser) {
+        if (currentUser == null) {
+            throw new UnauthorizedException("Vui lòng đăng nhập!");
+        }
+
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Nhóm không tồn tại!"));
+
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new ResourceNotFoundException("Yêu cầu tham gia không tồn tại!"));
+
+        if (!member.getUser().getId().equals(currentUser.getId())) {
+            throw new ForbiddenException("Bạn không có quyền phản hồi counter offer này!");
+        }
+
+        if (!member.getGroup().getId().equals(groupId)) {
+            throw new BadRequestException("Thành viên không thuộc nhóm này!");
+        }
+
+        if (!"pending_user_response".equalsIgnoreCase(member.getCounterOfferStatus())) {
+            throw new BadRequestException("Không có counter offer nào đang chờ phản hồi!");
+        }
+
+        if (member.getCounterOfferPercentage() == null) {
+            throw new BadRequestException("Counter offer percentage không hợp lệ!");
+        }
+
+        if (Boolean.TRUE.equals(accept)) {
+            // Member chấp nhận counter offer
+            BigDecimal currentTotal = group.getTotalOwnershipPercentage();
+            BigDecimal counterOfferPercentage = BigDecimal.valueOf(member.getCounterOfferPercentage());
+            BigDecimal newTotal = currentTotal.add(counterOfferPercentage);
+
+            if (newTotal.compareTo(BigDecimal.valueOf(100)) > 0) {
+                throw new BadRequestException(
+                    "Không thể chấp nhận counter offer vì tổng % sở hữu vượt quá 100%! " +
+                    "Hiện tại: " + currentTotal + "%, counter offer: " + counterOfferPercentage + "%");
+            }
+
+            // Cập nhật member
+            member.setOwnershipPercentage(member.getCounterOfferPercentage());
+            member.setJoinStatus("approved");
+            member.setCounterOfferStatus("accepted");
+            memberRepository.save(member);
+
+            // Cập nhật group
+            group.setTotalOwnershipPercentage(newTotal);
+
+            long approvedMembersCount = memberRepository.findByGroup_Id(groupId).stream()
+                .filter(m -> "approved".equalsIgnoreCase(m.getJoinStatus()))
+                .count();
+
+            if (newTotal.compareTo(BigDecimal.valueOf(100)) >= 0 || approvedMembersCount >= group.getMaxMembers()) {
+                group.setIsLocked(true);
+                group.setStatus("locked");
+            }
+
+            groupRepository.save(group);
+            return "Bạn đã chấp nhận counter offer và được duyệt vào nhóm với " +
+                   member.getCounterOfferPercentage() + "% sở hữu!";
+
+        } else {
+            // Member từ chối counter offer - Request quay về pending
+            // Chủ nhóm có thể gửi counter offer mới hoặc approve/reject
+            member.setJoinStatus("pending");
+            member.setCounterOfferStatus("rejected_by_member");
+            member.setCounterOfferPercentage(null); // Clear old counter offer
+            memberRepository.save(member);
+
+            return "Bạn đã từ chối counter offer. Chủ nhóm có thể gửi đề xuất mới hoặc xem xét lại yêu cầu của bạn.";
+        }
     }
 }

@@ -1,0 +1,163 @@
+### 1. Counter Offer Flow Test
+
+### Step 1: Login as member (user sẽ join group)
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "member@test.com",
+  "password": "password123"
+}
+
+> {%
+    client.global.set("memberToken", response.body.data.token);
+%}
+
+### Step 2: Request to join group
+POST http://localhost:8080/api/groups/1/join
+Content-Type: application/json
+Authorization: Bearer {{memberToken}}
+
+{
+  "proposedOwnershipPercentage": 30.0,
+  "reason": "Tôi muốn tham gia nhóm này vì tôi có nhu cầu sử dụng xe điện thường xuyên"
+}
+
+> {%
+    client.global.set("memberId", response.body.data.memberId);
+%}
+
+### Step 3: Login as group owner
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "owner@test.com",
+  "password": "password123"
+}
+
+> {%
+    client.global.set("ownerToken", response.body.data.token);
+%}
+
+### Step 4: Owner sends counter offer (đề xuất 20% thay vì 30%)
+POST http://localhost:8080/api/groups/1/members/{{memberId}}/review
+Content-Type: application/json
+Authorization: Bearer {{ownerToken}}
+
+{
+  "action": "counter_offer",
+  "counterOfferPercentage": 20.0
+}
+
+### Step 5: Login back as member
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "member@test.com",
+  "password": "password123"
+}
+
+> {%
+    client.global.set("memberToken", response.body.data.token);
+%}
+
+### Step 6a: Member accepts counter offer
+POST http://localhost:8080/api/groups/1/members/{{memberId}}/respond-counter-offer
+Content-Type: application/json
+Authorization: Bearer {{memberToken}}
+
+{
+  "accept": true
+}
+
+### Step 6b: Member rejects counter offer (alternative to Step 6a)
+POST http://localhost:8080/api/groups/1/members/{{memberId}}/respond-counter-offer
+Content-Type: application/json
+Authorization: Bearer {{memberToken}}
+
+{
+  "accept": false
+}
+
+### Step 7: After rejection, owner can send NEW counter offer
+POST http://localhost:8080/api/groups/1/members/{{memberId}}/review
+Content-Type: application/json
+Authorization: Bearer {{ownerToken}}
+
+{
+  "action": "counter_offer",
+  "counterOfferPercentage": 25.0
+}
+
+### Step 8: Member can accept the new counter offer
+POST http://localhost:8080/api/groups/1/members/{{memberId}}/respond-counter-offer
+Content-Type: application/json
+Authorization: Bearer {{memberToken}}
+
+{
+  "accept": true
+}
+
+### Step 9: Or owner can fully reject the member
+POST http://localhost:8080/api/groups/1/members/{{memberId}}/review
+Content-Type: application/json
+Authorization: Bearer {{ownerToken}}
+
+{
+  "action": "reject"
+}
+
+### Step 10: Member can send a NEW join request after being rejected
+POST http://localhost:8080/api/groups/1/join
+Content-Type: application/json
+Authorization: Bearer {{memberToken}}
+
+{
+  "proposedOwnershipPercentage": 28.0,
+  "reason": "Tôi đã xem xét lại và muốn tham gia với % mới"
+}
+
+###
+
+### 2. Get Members with Counter Offers
+
+### Get all members of a group (check for pending counter offers)
+GET http://localhost:8080/api/groups/1/members
+Authorization: Bearer {{memberToken}}
+
+###
+
+### 3. Leave Group Test
+
+### Member leaves group (ownership should return to pool)
+POST http://localhost:8080/api/groups/1/leave
+Authorization: Bearer {{memberToken}}
+
+###
+
+### 4. Remove Member Test
+
+### Owner/Admin removes a member (ownership should return to pool)
+DELETE http://localhost:8080/api/members/{{memberId}}
+Authorization: Bearer {{ownerToken}}
+
+###
+
+### 5. Check Available Ownership
+
+### Get available ownership percentage
+GET http://localhost:8080/api/groups/1/available-ownership
+Authorization: Bearer {{memberToken}}
+
+###
+
+### 6. Get My Ownership
+
+### Get my ownership in a group
+GET http://localhost:8080/api/groups/1/my-ownership
+Authorization: Bearer {{memberToken}}
+
+###
+

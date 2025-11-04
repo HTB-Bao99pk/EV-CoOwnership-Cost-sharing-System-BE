@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import fu.swp.evcs.dto.ApiResponse;
+import fu.swp.evcs.dto.CounterOfferResponseRequest;
 import fu.swp.evcs.dto.CreateGroupRequest;
 import fu.swp.evcs.dto.GroupResponse;
 import fu.swp.evcs.dto.JoinGroupRequest;
@@ -71,6 +72,16 @@ public class GroupController {
         return ResponseEntity.ok(ApiResponse.success(message, message));
     }
 
+    @PostMapping("/{groupId}/members/{memberId}/respond-counter-offer")
+    public ResponseEntity<ApiResponse<String>> respondToCounterOffer(
+            @PathVariable Long groupId,
+            @PathVariable Long memberId,
+            @RequestBody CounterOfferResponseRequest request,
+            @AuthenticationPrincipal User currentUser) {
+        String message = groupJoinService.respondToCounterOffer(groupId, memberId, request.getAccept(), currentUser);
+        return ResponseEntity.ok(ApiResponse.success(message, message));
+    }
+
     @GetMapping
     public ResponseEntity<ApiResponse<List<GroupResponse>>> getAllGroups(
             @RequestParam(required = false) String status,
@@ -114,15 +125,26 @@ public class GroupController {
     }
 
     // ========== Member Management (Nested Resource) ==========
-    
+
     @GetMapping("/{groupId}/members")
-    public ResponseEntity<ApiResponse<List<Member>>> getGroupMembers(@PathVariable Long groupId) {
-        List<Member> members = memberService.getMembersByGroup(groupId);
+    public ResponseEntity<ApiResponse<List<Member>>> getGroupMembers(
+            @PathVariable Long groupId,
+            @RequestParam(required = false) String joinStatus,
+            @RequestParam(required = false) String role,
+            @RequestParam(required = false) String search) {
+        List<Member> members;
+
+        if (joinStatus != null || role != null || search != null) {
+            members = memberService.getMembersByGroupFiltered(groupId, joinStatus, role, search);
+        } else {
+            members = memberService.getMembersByGroup(groupId);
+        }
+
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách thành viên nhóm thành công", members));
     }
 
     // ========== Additional Group APIs ==========
-    
+
     @GetMapping("/{groupId}/available-ownership")
     public ResponseEntity<ApiResponse<Double>> getAvailableOwnership(@PathVariable Long groupId) {
         Double available = groupService.getAvailableOwnership(groupId);
@@ -142,6 +164,14 @@ public class GroupController {
             @PathVariable Long groupId,
             @AuthenticationPrincipal User currentUser) {
         String message = groupService.leaveGroup(groupId, currentUser);
+        return ResponseEntity.ok(ApiResponse.success(message, message));
+    }
+
+    @PostMapping("/{groupId}/lock")
+    public ResponseEntity<ApiResponse<String>> lockGroup(
+            @PathVariable Long groupId,
+            @AuthenticationPrincipal User currentUser) {
+        String message = groupService.lockGroup(groupId, currentUser);
         return ResponseEntity.ok(ApiResponse.success(message, message));
     }
 }

@@ -231,7 +231,7 @@ public class GroupService {
             throw new UnauthorizedException("Vui lòng đăng nhập!");
         }
 
-        groupRepository.findById(groupId)
+        Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new ResourceNotFoundException("Nhóm không tồn tại!"));
 
         Member member = memberRepository.findByGroup_IdAndUser_Id(groupId, currentUser.getId())
@@ -241,8 +241,45 @@ public class GroupService {
             throw new BadRequestException("Chủ nhóm không thể rời khỏi nhóm!");
         }
 
+        // Return ownership to available pool if member was approved
+        if ("approved".equalsIgnoreCase(member.getJoinStatus()) && member.getOwnershipPercentage() != null) {
+            BigDecimal currentTotal = group.getTotalOwnershipPercentage();
+            BigDecimal memberOwnership = BigDecimal.valueOf(member.getOwnershipPercentage());
+            BigDecimal newTotal = currentTotal.subtract(memberOwnership);
+
+            group.setTotalOwnershipPercentage(newTotal);
+
+            // NOTE: Do NOT unlock group once it's locked (per owner requirement)
+            // Group stays locked even if ownership drops below 100%
+
+            groupRepository.save(group);
+        }
+
         memberRepository.delete(member);
         return "Rời nhóm thành công!";
+    }
+
+    public String lockGroup(Long groupId, User currentUser) {
+        if (currentUser == null) {
+            throw new UnauthorizedException("Vui lòng đăng nhập!");
+        }
+
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Nhóm không tồn tại!"));
+
+        if (!group.getCreatedBy().getId().equals(currentUser.getId())) {
+            throw new ForbiddenException("Chỉ chủ nhóm mới có quyền khóa nhóm!");
+        }
+
+        if (Boolean.TRUE.equals(group.getIsLocked())) {
+            throw new BadRequestException("Nhóm đã được khóa rồi!");
+        }
+
+        group.setIsLocked(true);
+        group.setStatus("locked");
+        groupRepository.save(group);
+
+        return "Đã khóa nhóm thành công!";
     }
 
     private GroupResponse convertToResponse(Group group) {
